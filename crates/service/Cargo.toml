@@ -1,0 +1,20 @@
+[package]
+name = "service"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+models = { path = "../models" }
+uuid = { workspace = true }
+chrono = { version = "0.4", features = ["serde", "clock"] }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+sea-orm = { workspace = true }
+tokio = { workspace = true }
+axum = { workspace = true }
+
+[dev-dependencies]
+migration = { path = "../migration" }
+tokio = { workspace = true }

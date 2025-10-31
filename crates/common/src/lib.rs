@@ -1,5 +1,43 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+use thiserror::Error;
+
+pub mod types;
+pub mod crypto;
+pub mod utils;
+
+#[derive(Debug, Error)]
+pub enum CoreError {
+    #[error("network error: {0}")]
+    Network(String),
+    #[error("parse error: {0}")]
+    Parse(String),
+}
+
+pub mod posts {
+    use super::*;
+
+    pub async fn fetch_posts() -> Result<serde_json::Value, CoreError> {
+        let url = "https://jsonplaceholder.typicode.com/posts";
+        let resp = reqwest::get(url)
+            .await
+            .map_err(|e| CoreError::Network(e.to_string()))?;
+        let json = resp
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| CoreError::Parse(e.to_string()))?;
+        Ok(json)
+    }
+
+    pub async fn fetch_post(id: u32) -> Result<serde_json::Value, CoreError> {
+        let url = format!("https://jsonplaceholder.typicode.com/posts/{id}");
+        let resp = reqwest::get(&url)
+            .await
+            .map_err(|e| CoreError::Network(e.to_string()))?;
+        let json = resp
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|e| CoreError::Parse(e.to_string()))?;
+        Ok(json)
+    }
 }
 
 #[cfg(test)]
@@ -7,8 +45,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn health_type_ok() {
+        let h = types::Health { status: "ok" };
+        assert_eq!(h.status, "ok");
     }
 }

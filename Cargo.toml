@@ -1,11 +1,9 @@
 [workspace]
 members = [
     "crates/common",
-    "crates/core",
-    "crates/utils",
     "crates/migration",
-    "bins/proxy",
-    "bins/server", "crates/models", "crates/configs",
+    "crates/gateway",
+    "crates/server", "crates/models", "crates/configs", "crates/service",
     
 ]
 resolver = "2"
@@ -43,3 +41,50 @@ async-trait = "0.1"
 log = "0.4"
 env_logger = "0.11"
 once_cell = "1"
+
+[package]
+name = "api_proxy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+dashmap = { workspace = true }
+moka = { workspace = true }
+arc-swap = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+prometheus = { workspace = true }
+dotenvy = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+once_cell = { workspace = true }
+pingora = { workspace = true }
+pingora-core = { workspace = true }
+pingora-proxy = { workspace = true }
+pingora-load-balancing = { workspace = true }
+pingora-http = { workspace = true }
+common = { path = "crates/common" }
+configs = { path = "crates/configs" }
+server = { path = "crates/server" }
+gateway = { path = "crates/gateway" }
+
+
+[[bin]]
+name = "gateway"
+path = "bins/gateway.rs"
+
+[[bin]]
+name = "server"
+path = "bins/server.rs"

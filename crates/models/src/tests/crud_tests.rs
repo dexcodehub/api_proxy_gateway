@@ -106,10 +106,14 @@ async fn test_user_crud() -> Result<()> {
     
     // Verify soft delete
     let deleted_user = user::Entity::find_by_id(created_user.id).one(&db).await?;
-    assert!(deleted_user.is_none());
+    assert!(deleted_user.is_some());
+    let deleted_user = deleted_user.unwrap();
+    assert!(deleted_user.deleted_at.is_some(), "soft delete should set deleted_at");
     
     // Test Hard Delete
     user::hard_delete(&db, created_user.id).await?;
+    let after_hard_delete = user::Entity::find_by_id(created_user.id).one(&db).await?;
+    assert!(after_hard_delete.is_none(), "hard delete should remove record");
     
     // Cleanup
     tenant::Entity::delete_by_id(test_tenant.id).exec(&db).await?;

@@ -1,11 +1,13 @@
 [package]
-name = "proxy"
+name = "gateway"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 async-trait = { workspace = true }
 env_logger = { workspace = true }
+common = { path = "../../crates/common" }
+service = { path = "../../crates/service" }
 log = { workspace = true }
 pingora-core = { workspace = true }
 pingora-proxy = { workspace = true }
@@ -22,7 +24,3 @@ tower-http = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 arc-swap = { workspace = true }
-
-[[bin]]
-name = "proxy"
-path = "src/main.rs"

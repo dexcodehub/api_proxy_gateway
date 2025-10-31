@@ -43,6 +43,8 @@ async fn test_custom_config_connection() -> Result<()> {
     }
 
     let mut config = DatabaseConfig::default();
+    // Ensure URL is set when using custom config
+    config.url = crate::db::DATABASE_URL.clone();
     config.max_connections = 5;
     config.min_connections = 1;
     config.connect_timeout = Duration::from_secs(10);
@@ -65,6 +67,7 @@ async fn test_connection_pool() -> Result<()> {
     }
 
     let mut config = DatabaseConfig::default();
+    config.url = crate::db::DATABASE_URL.clone();
     config.max_connections = 3;
     config.min_connections = 1;
     
@@ -247,6 +250,8 @@ async fn test_connection_acquire_timeout() -> Result<()> {
     }
 
     let mut config = DatabaseConfig::default();
+    // Ensure URL is set when using custom config
+    config.url = crate::db::DATABASE_URL.clone();
     config.max_connections = 1; // Very limited pool
     config.acquire_timeout = Duration::from_millis(500);
     
