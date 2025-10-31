@@ -1,3 +1,5 @@
+//! Migrator registering entity-specific migrations in dependency order.
+//! Indexes are applied last.
 pub use sea_orm_migration::prelude::*;
 
 mod m20220101_000011_create_tenant;

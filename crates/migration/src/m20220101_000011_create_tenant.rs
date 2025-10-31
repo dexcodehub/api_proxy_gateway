@@ -1,3 +1,6 @@
+//! Create `tenant` table.
+//!
+//! Root entity for multi-tenancy; other tables reference it.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]

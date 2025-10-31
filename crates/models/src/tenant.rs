@@ -23,12 +23,36 @@ impl RelationTrait for Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
+pub fn validate_name(name: &str) -> Result<(), errors::ModelError> {
+    if name.trim().is_empty() {
+        Err(errors::ModelError::Validation("name required".into()))
+    } else {
+        Ok(())
+    }
+}
+
 pub async fn create(db: &DatabaseConnection, name: &str) -> Result<Model, errors::ModelError> {
-    if name.trim().is_empty() { return Err(errors::ModelError::Validation("name required".into())); }
+    validate_name(name)?;
     let am = ActiveModel {
         id: Set(Uuid::new_v4()),
         name: Set(name.to_string()),
         created_at: Set(Utc::now().into()),
     };
     am.insert(db).await.map_err(|e| errors::ModelError::Db(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_name_rejects_empty() {
+        assert!(matches!(validate_name(""), Err(errors::ModelError::Validation(_))));
+        assert!(matches!(validate_name("   "), Err(errors::ModelError::Validation(_))));
+    }
+
+    #[test]
+    fn validate_name_accepts_normal() {
+        assert!(validate_name("acme").is_ok());
+    }
 }

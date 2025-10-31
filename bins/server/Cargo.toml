@@ -18,6 +18,7 @@ dotenvy = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 core = { path = "../../crates/core" }
+configs = { path = "../../crates/configs" }
 
 [[bin]]
 name = "server"

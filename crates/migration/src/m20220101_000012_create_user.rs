@@ -1,3 +1,6 @@
+//! Create `user` table with FK to `tenant`.
+//!
+//! Stores end-users; includes soft-delete timestamp.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -18,7 +21,12 @@ impl MigrationTrait for Migration {
                     .col(string_len(User::Status, 32).not_null())
                     .col(timestamp_with_time_zone(User::CreatedAt).not_null())
                     .col(timestamp_with_time_zone(User::UpdatedAt).not_null())
-                    .col(timestamp_with_time_zone(User::DeletedAt).null())
+                    // Explicitly define nullable deleted_at to avoid conflicting NULL/NOT NULL
+                    .col(
+                        ColumnDef::new(User::DeletedAt)
+                            .timestamp_with_time_zone()
+                            .null(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_user_tenant")

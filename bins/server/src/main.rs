@@ -89,8 +89,18 @@ async fn main() -> anyhow::Result<()> {
         .layer(cors)
         .layer(TraceLayer::new_for_http());
 
-    let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let port = env::var("SERVER_PORT").ok().and_then(|p| p.parse::<u16>().ok()).unwrap_or(8081);
+    // 优先使用 config.toml 的服务绑定配置
+    let (host, port) = match configs::load_default() {
+        Ok(cfg) => {
+            let s = cfg.server;
+            (s.host, s.port)
+        }
+        Err(_) => {
+            let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+            let port = env::var("SERVER_PORT").ok().and_then(|p| p.parse::<u16>().ok()).unwrap_or(8081);
+            (host, port)
+        }
+    };
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
 
     info!(%addr, "starting server crate");

@@ -1,0 +1,20 @@
+############################
+# API Proxy 配置文件 (TOML)
+############################
+
+[server]
+host = "127.0.0.1"
+port = 8080
+worker_threads = 4
+
+[database]
+url = "postgresql://postgres:dev123@localhost:5432/api_proxy"
+max_connections = 10
+min_connections = 2
+connect_timeout_secs = 30
+acquire_timeout_secs = 30
+idle_timeout_secs = 600
+max_lifetime_secs = 3600
+sqlx_logging = false
+
+# 可继续扩展其他模块：redis、log、metrics、tracing 等

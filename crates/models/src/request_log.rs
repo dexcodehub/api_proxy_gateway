@@ -32,3 +32,27 @@ impl RelationTrait for Relation {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+    use chrono::Utc;
+
+    #[test]
+    fn construct_model() {
+        let m = Model {
+            id: 1,
+            route_id: Uuid::new_v4(),
+            api_key_id: None,
+            status_code: 200,
+            latency_ms: 123,
+            success: true,
+            error_message: None,
+            client_ip: Some("127.0.0.1".into()),
+            timestamp: Utc::now().into(),
+        };
+        assert_eq!(m.status_code, 200);
+        assert!(m.success);
+    }
+}

@@ -1,3 +1,6 @@
+//! Create `rate_limit` table with optional FK to `tenant`.
+//!
+//! Defines throttling policies; tenant association is nullable.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -12,7 +15,11 @@ impl MigrationTrait for Migration {
                     .table(RateLimit::Table)
                     .if_not_exists()
                     .col(uuid(RateLimit::Id).primary_key())
-                    .col(uuid(RateLimit::TenantId).null())
+                    .col(
+                        ColumnDef::new(RateLimit::TenantId)
+                            .uuid()
+                            .null(),
+                    )
                     .col(integer(RateLimit::RequestsPerMinute).not_null())
                     .col(integer(RateLimit::Burst).not_null())
                     .col(timestamp_with_time_zone(RateLimit::CreatedAt).not_null())

@@ -25,3 +25,24 @@ impl RelationTrait for Relation {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+    use chrono::Utc;
+
+    #[test]
+    fn construct_model() {
+        let m = Model {
+            id: Uuid::new_v4(),
+            tenant_id: None,
+            requests_per_minute: 60,
+            burst: 10,
+            created_at: Utc::now().into(),
+        };
+        assert_eq!(m.requests_per_minute, 60);
+        assert_eq!(m.burst, 10);
+        assert!(m.tenant_id.is_none());
+    }
+}

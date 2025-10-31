@@ -33,9 +33,25 @@ impl RelationTrait for Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
+pub fn validate_email(email: &str) -> Result<(), errors::ModelError> {
+    if !email.contains('@') {
+        Err(errors::ModelError::Validation("invalid email".into()))
+    } else {
+        Ok(())
+    }
+}
+
+pub fn validate_name(name: &str) -> Result<(), errors::ModelError> {
+    if name.trim().is_empty() {
+        Err(errors::ModelError::Validation("name required".into()))
+    } else {
+        Ok(())
+    }
+}
+
 pub async fn create(db: &DatabaseConnection, tenant_id: Uuid, email: &str, name: &str) -> Result<Model, errors::ModelError> {
-    if !email.contains('@') { return Err(errors::ModelError::Validation("invalid email".into())); }
-    if name.trim().is_empty() { return Err(errors::ModelError::Validation("name required".into())); }
+    validate_email(email)?;
+    validate_name(name)?;
     let now = Utc::now().into();
     let am = ActiveModel {
         id: Set(Uuid::new_v4()),
@@ -48,6 +64,33 @@ pub async fn create(db: &DatabaseConnection, tenant_id: Uuid, email: &str, name:
         deleted_at: Set(None),
     };
     am.insert(db).await.map_err(|e| errors::ModelError::Db(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_email_rejects_invalid() {
+        assert!(matches!(validate_email("bob"), Err(errors::ModelError::Validation(_))));
+        assert!(matches!(validate_email(""), Err(errors::ModelError::Validation(_))));
+    }
+
+    #[test]
+    fn validate_email_accepts_valid() {
+        assert!(validate_email("bob@example.com").is_ok());
+    }
+
+    #[test]
+    fn validate_name_rejects_empty() {
+        assert!(matches!(validate_name(""), Err(errors::ModelError::Validation(_))));
+        assert!(matches!(validate_name("   "), Err(errors::ModelError::Validation(_))));
+    }
+
+    #[test]
+    fn validate_name_accepts_normal() {
+        assert!(validate_name("Bob").is_ok());
+    }
 }
 
 pub async fn soft_delete(db: &DatabaseConnection, id: Uuid) -> Result<(), errors::ModelError> {

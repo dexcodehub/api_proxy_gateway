@@ -5,7 +5,7 @@ members = [
     "crates/utils",
     "crates/migration",
     "bins/proxy",
-    "bins/server", "crates/models",
+    "bins/server", "crates/models", "crates/configs",
     
 ]
 resolver = "2"

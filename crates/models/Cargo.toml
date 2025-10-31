@@ -15,3 +15,5 @@ migration = { path = "../migration" }
 chrono = { version = "0.4", features = ["clock", "serde"] }
 uuid = { workspace = true }
 dotenvy = { workspace = true }
+tracing = { workspace = true }
+configs = { path = "../configs" }

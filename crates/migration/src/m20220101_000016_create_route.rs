@@ -1,3 +1,6 @@
+//! Create `route` table with FKs to `tenant`, `upstream`, and optional `rate_limit`.
+//!
+//! Represents proxy routing rules and resilience parameters.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -19,7 +22,11 @@ impl MigrationTrait for Migration {
                     .col(integer(Route::TimeoutMs).not_null())
                     .col(integer(Route::RetryMaxAttempts).not_null())
                     .col(integer(Route::CircuitBreakerThreshold).not_null())
-                    .col(uuid(Route::RateLimitId).null())
+                    .col(
+                        ColumnDef::new(Route::RateLimitId)
+                            .uuid()
+                            .null(),
+                    )
                     .col(timestamp_with_time_zone(Route::CreatedAt).not_null())
                     .foreign_key(
                         ForeignKey::create()

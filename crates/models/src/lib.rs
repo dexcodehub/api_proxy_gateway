@@ -9,7 +9,10 @@ pub mod route;
 pub mod request_log;
 
 #[cfg(test)]
-mod tests {
+mod tests;
+
+#[cfg(test)]
+mod legacy_tests {
     use std::time::Instant;
     use migration::MigratorTrait;
     use sea_orm::{Set, TransactionTrait, ActiveModelTrait};

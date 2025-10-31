@@ -1,3 +1,6 @@
+//! Create `api_key` table with FK to `user`.
+//!
+//! Stores hashed API keys and last used timestamp.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -16,7 +19,11 @@ impl MigrationTrait for Migration {
                     .col(string_len(ApiKey::KeyHash, 255).unique_key().not_null())
                     .col(string_len(ApiKey::Status, 32).not_null())
                     .col(timestamp_with_time_zone(ApiKey::CreatedAt).not_null())
-                    .col(timestamp_with_time_zone(ApiKey::LastUsedAt).null())
+                    .col(
+                        ColumnDef::new(ApiKey::LastUsedAt)
+                            .timestamp_with_time_zone()
+                            .null(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk_apikey_user")

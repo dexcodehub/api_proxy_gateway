@@ -29,8 +29,16 @@ impl RelationTrait for Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
+pub fn validate_key_hash(key_hash: &str) -> Result<(), errors::ModelError> {
+    if key_hash.len() < 12 {
+        Err(errors::ModelError::Validation("key_hash too short".into()))
+    } else {
+        Ok(())
+    }
+}
+
 pub async fn create(db: &DatabaseConnection, user_id: Uuid, key_hash: &str) -> Result<Model, errors::ModelError> {
-    if key_hash.len() < 12 { return Err(errors::ModelError::Validation("key_hash too short".into())); }
+    validate_key_hash(key_hash)?;
     let am = ActiveModel {
         id: Set(Uuid::new_v4()),
         user_id: Set(user_id),
@@ -40,4 +48,20 @@ pub async fn create(db: &DatabaseConnection, user_id: Uuid, key_hash: &str) -> R
         last_used_at: Set(None),
     };
     am.insert(db).await.map_err(|e| errors::ModelError::Db(e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_key_hash_rejects_short() {
+        assert!(matches!(validate_key_hash("short"), Err(errors::ModelError::Validation(_))));
+        assert!(matches!(validate_key_hash("12345678901"), Err(errors::ModelError::Validation(_))));
+    }
+
+    #[test]
+    fn validate_key_hash_accepts_long_enough() {
+        assert!(validate_key_hash("123456789012").is_ok());
+    }
 }

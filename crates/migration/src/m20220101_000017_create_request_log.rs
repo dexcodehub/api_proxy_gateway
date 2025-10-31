@@ -1,3 +1,6 @@
+//! Create `request_log` table with FKs to `route` and optional `api_key`.
+//!
+//! Stores per-request metrics and outcome for observability.
 use sea_orm_migration::{prelude::*, schema::*};
 
 #[derive(DeriveMigrationName)]
@@ -13,12 +16,24 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(big_integer(RequestLog::Id).primary_key().auto_increment())
                     .col(uuid(RequestLog::RouteId).not_null())
-                    .col(uuid(RequestLog::ApiKeyId).null())
+                    .col(
+                        ColumnDef::new(RequestLog::ApiKeyId)
+                            .uuid()
+                            .null(),
+                    )
                     .col(integer(RequestLog::StatusCode).not_null())
                     .col(integer(RequestLog::LatencyMs).not_null())
                     .col(boolean(RequestLog::Success).not_null())
-                    .col(text(RequestLog::ErrorMessage).null())
-                    .col(string_len(RequestLog::ClientIp, 64).null())
+                    .col(
+                        ColumnDef::new(RequestLog::ErrorMessage)
+                            .text()
+                            .null(),
+                    )
+                    .col(
+                        ColumnDef::new(RequestLog::ClientIp)
+                            .string_len(64)
+                            .null(),
+                    )
                     .col(timestamp_with_time_zone(RequestLog::Timestamp).not_null())
                     .foreign_key(
                         ForeignKey::create()

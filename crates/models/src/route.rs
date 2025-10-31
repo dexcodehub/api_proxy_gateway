@@ -34,3 +34,29 @@ impl RelationTrait for Relation {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+    use chrono::Utc;
+
+    #[test]
+    fn construct_model() {
+        let m = Model {
+            id: Uuid::new_v4(),
+            tenant_id: Uuid::new_v4(),
+            method: "GET".into(),
+            path: "/api".into(),
+            upstream_id: Uuid::new_v4(),
+            timeout_ms: 1000,
+            retry_max_attempts: 2,
+            circuit_breaker_threshold: 5,
+            rate_limit_id: None,
+            created_at: Utc::now().into(),
+        };
+        assert_eq!(m.method, "GET");
+        assert_eq!(m.path, "/api");
+        assert!(m.rate_limit_id.is_none());
+    }
+}
