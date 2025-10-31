@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Proxy MVP</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="container">
+      <h1>API Proxy 最小可行产品</h1>
+      <p class="subtitle">使用公开免费 API（JSONPlaceholder）联调</p>
+    </header>
+    <main class="container">
+      <section class="card">
+        <h2>获取文章列表</h2>
+        <div class="actions">
+          <button id="fetchPosts">拉取 Posts</button>
+          <label>
+            按 ID 查询：
+            <input id="postId" type="number" min="1" placeholder="例如 1" />
+          </label>
+          <button id="fetchPost">查询单条</button>
+          <label style="margin-left: 8px;">
+            API Key：
+            <input id="apiKeyInput" type="text" placeholder="在此输入并保存" />
+          </label>
+          <button id="saveApiKey">保存API Key</button>
+        </div>
+        <pre id="output" class="output">点击上方按钮进行请求</pre>
+      </section>
+    </main>
+    <footer class="container footer">
+      <small>健康检查：<span id="health">检查中...</span></small>
+    </footer>
+    <script src="/app.js"></script>
+  </body>
+  </html>

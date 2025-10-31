@@ -1,0 +1,17 @@
+[package]
+name = "models"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sea-orm = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+once_cell = { workspace = true }
+migration = { path = "../migration" }
+chrono = { version = "0.4", features = ["clock", "serde"] }
+uuid = { workspace = true }
+dotenvy = { workspace = true }

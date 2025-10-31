@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>API Key 管理</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .grid { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ddd; padding: 8px; }
+      th { background: #f6f6f6; }
+    </style>
+  </head>
+  <body>
+    <header class="container">
+      <h1>管理后台：配置用户 API Key</h1>
+      <p class="subtitle"><a href="/">返回首页</a></p>
+    </header>
+    <main class="container">
+      <section class="card">
+        <h2>新增/更新 API Key</h2>
+        <div class="grid">
+          <label>用户：<input id="user" placeholder="例如 alice" /></label>
+          <label>API Key：<input id="apiKey" placeholder="填写密钥" /></label>
+          <button id="save">保存</button>
+        </div>
+        <pre id="msg" class="output">填写后点击保存</pre>
+      </section>
+      <section class="card">
+        <h2>当前配置</h2>
+        <table>
+          <thead>
+            <tr><th>用户</th><th>API Key</th><th>操作</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </section>
+    </main>
+    <script>
+      async function refresh() {
+        const res = await fetch('/admin/api-keys');
+        const items = await res.json();
+        const tbody = document.getElementById('rows');
+        tbody.innerHTML = '';
+        for (const item of items) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.user}</td>
+            <td>${item.api_key}</td>
+            <td><button data-user="${item.user}">删除</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
+        tbody.querySelectorAll('button[data-user]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const user = btn.getAttribute('data-user');
+            const r = await fetch(`/admin/api-keys/${encodeURIComponent(user)}`, { method: 'DELETE' });
+            if (r.status === 204) refresh();
+          });
+        });
+      }
+
+      document.getElementById('save').addEventListener('click', async () => {
+        const user = document.getElementById('user').value.trim();
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const msg = document.getElementById('msg');
+        msg.textContent = '保存中...';
+        try {
+          const res = await fetch('/admin/api-keys', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user, api_key: apiKey })
+          });
+          if (res.ok) {
+            msg.textContent = '保存成功';
+            document.getElementById('apiKey').value = '';
+            refresh();
+          } else {
+            const t = await res.text();
+            msg.textContent = `保存失败：${res.status} ${t}`;
+          }
+        } catch (e) {
+          msg.textContent = `请求错误：${e}`;
+        }
+      });
+
+      refresh();
+    </script>
+  </body>
+  </html>
