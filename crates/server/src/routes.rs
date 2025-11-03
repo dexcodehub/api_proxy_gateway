@@ -5,7 +5,12 @@ use axum::{
     routing::{delete, get},
     Json, Router,
 };
-use tower_http::{cors::CorsLayer, services::{ServeDir, ServeFile}, trace::TraceLayer};
+use tower_http::{
+    cors::CorsLayer,
+    services::{ServeDir, ServeFile},
+    trace::{TraceLayer, DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, DefaultOnFailure},
+};
+use tracing::Level;
 use axum::middleware;
 
 use common::{posts, types::Health};
@@ -60,5 +65,29 @@ pub fn build_router(admin_store: Arc<admin::ApiKeysStore>, cors: CorsLayer) -> R
         .merge(admin_routes)
         .with_state(admin_store.clone())
         .layer(cors)
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                // 每次请求创建 span，包含方法和路径等，日志级别为 INFO
+                .make_span_with(
+                    DefaultMakeSpan::new()
+                        .level(Level::INFO)
+                        .include_headers(false),
+                )
+                // 请求到达时打点
+                .on_request(
+                    DefaultOnRequest::new()
+                        .level(Level::INFO),
+                )
+                // 响应返回时打点，包含状态码与耗时
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .include_headers(false),
+                )
+                // 失败（5xx 等）时以 ERROR 记录
+                .on_failure(
+                    DefaultOnFailure::new()
+                        .level(Level::ERROR),
+                )
+        )
 }

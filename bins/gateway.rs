@@ -1,22 +1,14 @@
 use dotenvy::dotenv;
 use gateway::bootstrap;
 use tracing::{ error, info};
-use tracing_subscriber::{fmt, EnvFilter};
+use common::utils::logging::init_logging_json;
 use uuid::Uuid;
 
 fn init_logging() {
     // 加载 .env（允许使用 RUST_LOG 配置日志级别）
     dotenv().ok();
-
-    // 如果环境变量未设置，则默认启用 info 级别
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
-
-    let _ = fmt()
-        .with_env_filter(env_filter)
-        .with_target(false)
-        .compact() // 统一紧凑格式；字段化日志便于检索
-        .try_init();
+    // 使用统一的JSON结构化日志初始化
+    init_logging_json();
     info!(service = "gateway", event = "logger_init", "tracing subscriber initialized");
 }
 

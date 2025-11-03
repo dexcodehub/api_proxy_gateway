@@ -1,3 +1,5 @@
+const GW_BASE = (window.GW_BASE || localStorage.getItem('GW_BASE') || 'http://127.0.0.1:6188');
+
 function getApiKey() {
   return localStorage.getItem('apiKey') || '';
 }
@@ -15,7 +17,8 @@ async function request(url) {
   }
   el.textContent = '加载中...';
   try {
-    const res = await fetch(url, { headers: { 'X-API-Key': key } });
+    const fullUrl = url.startsWith('http') ? url : `${GW_BASE}${url}`;
+    const res = await fetch(fullUrl, { headers: { 'X-API-Key': key } });
     const data = await res.json();
     el.textContent = JSON.stringify(data, null, 2);
   } catch (err) {
@@ -36,7 +39,7 @@ document.getElementById('fetchPost').addEventListener('click', () => {
 (async () => {
   const el = document.getElementById('health');
   try {
-    const res = await fetch('/health');
+    const res = await fetch(`${GW_BASE}/health`);
     const data = await res.json();
     el.textContent = data.status;
   } catch {

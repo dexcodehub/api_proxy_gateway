@@ -8,7 +8,7 @@ use pingora_load_balancing::health_check;
 use pingora_load_balancing::selection::RoundRobin;
 use pingora_load_balancing::LoadBalancer;
 use tracing::{info, warn};
-use common::utils::logging::init_logging_default;
+use common::utils::logging::init_logging_json;
 use service::admin_http;
 
 use crate::config::ProxyConfig;
@@ -20,7 +20,7 @@ use crate::circuit_breaker::CircuitBreaker;
 
 // admin server spawner moved to service::admin_http
 
-fn init_tracing() { init_logging_default(); }
+fn init_tracing() { init_logging_json(); }
 
 pub fn run() {
     init_tracing();
@@ -94,7 +94,9 @@ pub fn run() {
 
     // Create HTTP proxy service that uses our LB policy
     let mut proxy_service = pingora_proxy::http_proxy_service(&server.configuration, lb_service);
-    proxy_service.add_tcp("0.0.0.0:6188");
+    let listen_addr = "0.0.0.0:6188";
+    proxy_service.add_tcp(listen_addr);
+    info!(event = "listen", addr = listen_addr, "gateway listening");
 
     // Host proxy service
     server.add_service(proxy_service);
