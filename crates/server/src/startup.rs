@@ -47,12 +47,20 @@ pub async fn run() -> anyhow::Result<()> {
     // Admin state for API Key management
     let admin_store = admin::ApiKeysStore::new("data/api_keys.json").await?;
 
+    // API 管理存储（文件持久化 data/apis.json）
+    let api_store = service::api_management::ApiStore::new("data/apis.json").await?;
+
     // DB connection
     let db = models::db::connect().await?;
 
     // JWT secret
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
-    let state = auth::ServerState { db, auth: auth::ServerAuthConfig { jwt_secret }, admin_store: std::sync::Arc::clone(&admin_store) };
+    let state = auth::ServerState {
+        db,
+        auth: auth::ServerAuthConfig { jwt_secret },
+        admin_store: std::sync::Arc::clone(&admin_store),
+        api_store: std::sync::Arc::clone(&api_store),
+    };
 
     // Build router
     let cors = build_cors();

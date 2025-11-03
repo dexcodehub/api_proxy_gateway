@@ -9,6 +9,8 @@ pub mod transaction_tests;
 
 /// Performance and resource management tests
 pub mod performance_tests;
+/// Proxy API entity tests
+pub mod proxy_api_tests;
 
 /// Integration tests combining multiple components
 pub mod integration_tests {

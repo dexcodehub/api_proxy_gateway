@@ -12,4 +12,14 @@ export const frontendNavData: NavProps["data"] = [
       },
     ],
   },
+  {
+    name: "代理 API",
+    items: [
+      {
+        title: "代理API管理",
+        path: "/proxy-apis",
+        icon: <Icon icon="solar:cloud-bold-duotone" size={24} />,
+      },
+    ],
+  },
 ];

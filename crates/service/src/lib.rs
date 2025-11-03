@@ -9,11 +9,13 @@ pub mod tenant_service;
 pub mod apikey_service;
 pub mod upstream_service;
 pub mod route_service;
+pub mod api_management;
 pub mod ratelimit_service;
 pub mod request_log_service;
 pub mod pagination;
 pub mod runtime;
 pub mod admin_http;
 pub mod auth;
+pub mod proxy_api_service;
 #[cfg(test)]
 pub mod test_support;

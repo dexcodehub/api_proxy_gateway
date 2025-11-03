@@ -8,6 +8,7 @@ pub mod upstream;
 pub mod ratelimit;
 pub mod route;
 pub mod request_log;
+pub mod proxy_api;
 
 #[cfg(test)]
 mod tests;

@@ -22,6 +22,7 @@ pub struct ServerState {
     pub db: DatabaseConnection,
     pub auth: ServerAuthConfig,
     pub admin_store: std::sync::Arc<crate::admin::ApiKeysStore>,
+    pub api_store: std::sync::Arc<service::api_management::ApiStore>,
 }
 
 // RegisterInput is provided by service::auth::domain

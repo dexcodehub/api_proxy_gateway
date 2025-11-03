@@ -9,15 +9,30 @@ use migration::MigratorTrait;
 use server::auth;
 use server::routes;
 use server::admin;
+use service::api_management::ApiStore;
 
 fn cors() -> tower_http::cors::CorsLayer { tower_http::cors::CorsLayer::very_permissive() }
 
 async fn build_app() -> anyhow::Result<Router> {
     let db = models::db::connect().await?;
-    // Run migrations to ensure schema
-    migration::Migrator::up(&db, None).await?;
+    // Run migrations to ensure schema（重复运行可能会报唯一约束错误，忽略已应用的情况）
+    if let Err(e) = migration::Migrator::up(&db, None).await {
+        let msg = format!("{}", e);
+        if msg.contains("duplicate key value violates unique constraint") {
+            eprintln!("migrations already applied, continue: {}", msg);
+        } else {
+            return Err(e.into());
+        }
+    }
     let admin_store = admin::ApiKeysStore::new("data/api_keys.json").await?;
-    let state = auth::ServerState { db, auth: auth::ServerAuthConfig { jwt_secret: "test-secret".into() }, admin_store };
+    // 初始化 API 管理存储（用于 /admin/apis 管理端点）
+    let api_store = ApiStore::new("data/apis.json").await?;
+    let state = auth::ServerState {
+        db,
+        auth: auth::ServerAuthConfig { jwt_secret: "test-secret".into() },
+        admin_store,
+        api_store: std::sync::Arc::clone(&api_store),
+    };
     Ok(routes::build_router(state.admin_store.clone(), cors(), state))
 }
 
@@ -38,6 +53,7 @@ async fn test_register_and_login_flow() -> anyhow::Result<()> {
         .header("content-type", "application/json")
         .body(Body::from(serde_json::to_vec(&json!({"tenant_id": tid, "email": email, "name": name, "password": password}))?))?;
     let resp = app.clone().call(req).await?;
+    eprintln!("register status={}", resp.status());
     assert_eq!(resp.status(), StatusCode::OK);
 
     // Login
@@ -47,6 +63,7 @@ async fn test_register_and_login_flow() -> anyhow::Result<()> {
         .header("content-type", "application/json")
         .body(Body::from(serde_json::to_vec(&json!({"tenant_id": tid, "email": email, "password": password}))?))?;
     let resp = app.clone().call(req).await?;
+    eprintln!("login status={}", resp.status());
     assert_eq!(resp.status(), StatusCode::OK);
     // Must set cookie
     let cookie = resp.headers().get("set-cookie");
@@ -67,11 +84,13 @@ async fn test_login_wrong_password() -> anyhow::Result<()> {
     let req = Request::builder().method("POST").uri("/auth/register").header("content-type", "application/json")
         .body(Body::from(serde_json::to_vec(&json!({"tenant_id": tid, "email": email, "name": name, "password": "StrongPass123"}))?))?;
     let _ = app.clone().call(req).await?;
+    eprintln!("register strong pass done");
 
     // Login with wrong pass
     let req = Request::builder().method("POST").uri("/auth/login").header("content-type", "application/json")
         .body(Body::from(serde_json::to_vec(&json!({"tenant_id": tid, "email": email, "password": "wrong"}))?))?;
     let resp = app.clone().call(req).await?;
+    eprintln!("login wrong pass status={}", resp.status());
     assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     Ok(())
 }

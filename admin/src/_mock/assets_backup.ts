@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import type { Menu, Permission, Role, User } from "#/entity";
 import { PermissionType } from "#/enum";
 
-const { GROUP, MENU, CATALOGUE } = PermissionType;
+const { GROUP, MENU } = PermissionType;
 
 export const DB_MENU: Menu[] = [
   // Single group with only API Key management

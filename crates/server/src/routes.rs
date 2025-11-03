@@ -16,8 +16,10 @@ use axum::middleware;
 use common::{posts, types::Health};
 
 use crate::admin;
+use crate::apis;
 use crate::auth::{self, ServerState};
 use crate::errors::ApiError;
+use crate::proxy_apis;
 
 pub async fn health() -> Json<Health> {
     Json(Health { status: "ok" })
@@ -66,6 +68,12 @@ pub fn build_router(_admin_store: Arc<admin::ApiKeysStore>, cors: CorsLayer, sta
     let admin_routes = Router::new()
         .route("/admin/api-keys", get(admin::list_api_keys).post(admin::set_api_key))
         .route("/admin/api-keys/:user", delete(admin::delete_api_key))
+        // API 管理（CRUD）
+        .route("/admin/apis", get(apis::list_apis).post(apis::create_api))
+        .route("/admin/apis/:id", get(apis::get_api).put(apis::update_api).delete(apis::delete_api))
+        // Proxy API 管理（数据库驱动 CRUD）
+        .route("/admin/proxy-apis", get(proxy_apis::list).post(proxy_apis::create))
+        .route("/admin/proxy-apis/:id", get(proxy_apis::get).put(proxy_apis::update).delete(proxy_apis::delete))
         .with_state(state.clone());
 
     // Compose

@@ -10,6 +10,7 @@ mod m20220101_000015_create_ratelimit;
 mod m20220101_000016_create_route;
 mod m20220101_000017_create_request_log;
 mod m20220101_000018_create_user_credentials;
+mod m20220101_000019_create_proxy_api;
 mod m20220101_000002_add_indexes;
 
 pub struct Migrator;
@@ -26,6 +27,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20220101_000015_create_ratelimit::Migration),
             Box::new(m20220101_000016_create_route::Migration),
             Box::new(m20220101_000017_create_request_log::Migration),
+            Box::new(m20220101_000019_create_proxy_api::Migration),
             // Indexes should always be applied last
             Box::new(m20220101_000002_add_indexes::Migration),
         ]

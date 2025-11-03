@@ -30,12 +30,13 @@ export default function AccountDropdown() {
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button variant="ghost" size="icon" className="rounded-full">
-					<img className="h-6 w-6 rounded-full" src={avatar} alt="" />
+					{/* 避免空 src 警告：当 avatar 为空字符串时传 undefined 以移除 src */}
+					<img className="h-6 w-6 rounded-full" src={avatar || undefined} alt="" />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent className="w-56">
 				<div className="flex items-center gap-2 p-2">
-					<img className="h-10 w-10 rounded-full" src={avatar} alt="" />
+					<img className="h-10 w-10 rounded-full" src={avatar || undefined} alt="" />
 					<div className="flex flex-col items-start">
 						<div className="text-text-primary text-sm font-medium">{username}</div>
 						<div className="text-text-secondary text-xs">{email}</div>
