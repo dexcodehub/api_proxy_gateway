@@ -1,6 +1,5 @@
 use uuid::Uuid;
 use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, Set};
-use chrono::Utc;
 
 use models::tenant;
 use crate::errors::ServiceError;

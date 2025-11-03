@@ -6,7 +6,7 @@ use tower_http::cors::CorsLayer;
 use tracing::info;
 use common::utils::logging::init_logging_default;
 
-use crate::{admin, routes};
+use crate::{admin, routes, auth};
 use service::runtime;
 
 /// Initialize logging via shared common utils
@@ -47,9 +47,16 @@ pub async fn run() -> anyhow::Result<()> {
     // Admin state for API Key management
     let admin_store = admin::ApiKeysStore::new("data/api_keys.json").await?;
 
+    // DB connection
+    let db = models::db::connect().await?;
+
+    // JWT secret
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
+    let state = auth::ServerState { db, auth: auth::ServerAuthConfig { jwt_secret }, admin_store: std::sync::Arc::clone(&admin_store) };
+
     // Build router
     let cors = build_cors();
-    let app: Router = routes::build_router(Arc::clone(&admin_store), cors);
+    let app: Router = routes::build_router(Arc::clone(&admin_store), cors, state);
 
     // Bind and serve
     let addr = load_bind_addr()?;

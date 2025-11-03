@@ -1,3 +1,4 @@
+//! Runtime helpers for environment sanity checks
 use tracing::warn;
 
 /// Ensure expected directories exist; warn on missing optional ones.

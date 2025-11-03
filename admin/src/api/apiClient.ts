@@ -7,37 +7,48 @@ import type { Result } from "#/api";
 import { ResultStatus } from "#/enum";
 
 const axiosInstance = axios.create({
-	baseURL: GLOBAL_CONFIG.apiBaseUrl,
-	timeout: 50000,
-	headers: { "Content-Type": "application/json;charset=utf-8" },
+    baseURL: GLOBAL_CONFIG.apiBaseUrl,
+    timeout: 50000,
+    withCredentials: true,
+    headers: { "Content-Type": "application/json;charset=utf-8" },
 });
 
 axiosInstance.interceptors.request.use(
-	(config) => {
-		config.headers.Authorization = "Bearer Token";
-		return config;
-	},
-	(error) => Promise.reject(error),
+    (config) => {
+        // Attach CSRF token if available
+        const csrfToken = localStorage.getItem("csrfToken");
+        if (csrfToken) {
+            (config.headers as Record<string, string>)["X-CSRF-Token"] = csrfToken;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error),
 );
 
 axiosInstance.interceptors.response.use(
-	(res: AxiosResponse<Result<any>>) => {
-		if (!res.data) throw new Error(t("sys.api.apiRequestFailed"));
-		const { status, data, message } = res.data;
-		if (status === ResultStatus.SUCCESS) {
-			return data;
-		}
-		throw new Error(message || t("sys.api.apiRequestFailed"));
-	},
-	(error: AxiosError<Result>) => {
-		const { response, message } = error || {};
-		const errMsg = response?.data?.message || message || t("sys.api.errorMessage");
-		toast.error(errMsg, { position: "top-center" });
-		if (response?.status === 401) {
-			userStore.getState().actions.clearUserInfoAndToken();
-		}
-		return Promise.reject(error);
-	},
+    (res: AxiosResponse<any>) => {
+        if (!res.data) throw new Error(t("sys.api.apiRequestFailed"));
+        // Support both unified Result payloads and raw payloads (e.g. auth/login/register)
+        const payload = res.data as any;
+        if (payload && typeof payload === "object" && "status" in payload) {
+            const { status, data, message } = payload as Result<any>;
+            if (status === ResultStatus.SUCCESS) {
+                return data as any;
+            }
+            throw new Error(message || t("sys.api.apiRequestFailed"));
+        }
+        // Raw payload — return directly
+        return payload;
+    },
+    (error: AxiosError<Result>) => {
+        const { response, message } = error || {};
+        const errMsg = (response?.data as any)?.message || message || t("sys.api.errorMessage");
+        toast.error(errMsg, { position: "top-center" });
+        if (response?.status === 401) {
+            userStore.getState().actions.clearUserInfoAndToken();
+        }
+        return Promise.reject(error);
+    },
 );
 
 class APIClient {

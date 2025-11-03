@@ -9,6 +9,7 @@ mod m20220101_000014_create_upstream;
 mod m20220101_000015_create_ratelimit;
 mod m20220101_000016_create_route;
 mod m20220101_000017_create_request_log;
+mod m20220101_000018_create_user_credentials;
 mod m20220101_000002_add_indexes;
 
 pub struct Migrator;
@@ -19,6 +20,7 @@ impl MigratorTrait for Migrator {
         vec![
             Box::new(m20220101_000011_create_tenant::Migration),
             Box::new(m20220101_000012_create_user::Migration),
+            Box::new(m20220101_000018_create_user_credentials::Migration),
             Box::new(m20220101_000013_create_apikey::Migration),
             Box::new(m20220101_000014_create_upstream::Migration),
             Box::new(m20220101_000015_create_ratelimit::Migration),

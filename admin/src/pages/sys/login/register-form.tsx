@@ -16,20 +16,19 @@ function RegisterForm() {
 		mutationFn: userService.signup,
 	});
 
-	const form = useForm({
-		defaultValues: {
-			username: "",
-			email: "",
-			password: "",
-			confirmPassword: "",
-		},
-	});
+    const form = useForm({
+        defaultValues: {
+            username: "",
+            password: "",
+            confirmPassword: "",
+        },
+    });
 
-	const onFinish = async (values: any) => {
-		console.log("Received values of form: ", values);
-		await signUpMutation.mutateAsync(values);
-		backToLogin();
-	};
+    const onFinish = async (values: any) => {
+        const payload = { username: values.username, password: values.password };
+        await signUpMutation.mutateAsync(payload);
+        backToLogin();
+    };
 
 	if (loginState !== LoginStateEnum.REGISTER) return null;
 
@@ -54,33 +53,21 @@ function RegisterForm() {
 					)}
 				/>
 
-				<FormField
-					control={form.control}
-					name="email"
-					rules={{ required: t("sys.login.emaildPlaceholder") }}
-					render={({ field }) => (
-						<FormItem>
-							<FormControl>
-								<Input placeholder={t("sys.login.email")} {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+                {/* 移除邮箱字段，仅用户名+密码注册 */}
 
-				<FormField
-					control={form.control}
-					name="password"
-					rules={{ required: t("sys.login.passwordPlaceholder") }}
-					render={({ field }) => (
-						<FormItem>
-							<FormControl>
-								<Input type="password" placeholder={t("sys.login.password")} {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+                <FormField
+                    control={form.control}
+                    name="password"
+                    rules={{ required: t("sys.login.passwordPlaceholder"), minLength: { value: 8, message: t("sys.login.passwordPlaceholder") } }}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <Input type="password" placeholder={t("sys.login.password")} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
 				<FormField
 					control={form.control}

@@ -14,5 +14,6 @@ pub mod request_log_service;
 pub mod pagination;
 pub mod runtime;
 pub mod admin_http;
+pub mod auth;
 #[cfg(test)]
 pub mod test_support;

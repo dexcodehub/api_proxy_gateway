@@ -1,3 +1,4 @@
+//! Service error types and mapping for service layer
 use thiserror::Error;
 
 #[derive(Debug, Error)]

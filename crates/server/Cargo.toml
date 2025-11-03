@@ -17,6 +17,18 @@ prometheus = { workspace = true }
 dotenvy = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
-common = { path = "../../crates/common" }
-configs = { path = "../../crates/configs" }
-service = { path = "../../crates/service" }
+common = { path = "../common" }
+configs = { path = "../configs" }
+service = { path = "../service", features = ["seaorm"] }
+axum-gate = "1.0.0"
+argon2 = "0.5"
+rand = "0.8"
+jsonwebtoken = "9"
+axum-extra = { version = "0.9", features = ["cookie"] }
+models = { path = "../models" }
+sea-orm = { workspace = true }
+uuid = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+migration = { path = "../migration" }

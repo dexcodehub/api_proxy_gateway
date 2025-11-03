@@ -1,6 +1,7 @@
+pub mod routes;
+pub mod startup;
 pub mod admin;
-mod errors;
-mod routes;
-mod startup;
+pub mod errors;
+pub mod auth;
 
 pub use startup::run;

@@ -2,6 +2,7 @@ pub mod errors;
 pub mod db;
 pub mod tenant;
 pub mod user;
+pub mod user_credentials;
 pub mod apikey;
 pub mod upstream;
 pub mod ratelimit;

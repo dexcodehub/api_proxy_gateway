@@ -49,7 +49,8 @@ impl ApiKeysStore {
     }
 }
 
-pub async fn list_api_keys(State(store): State<Arc<ApiKeysStore>>) -> Json<Vec<ApiKeyRecord>> {
+pub async fn list_api_keys(State(state): State<crate::auth::ServerState>) -> Json<Vec<ApiKeyRecord>> {
+    let store = state.admin_store.clone();
     let map = store.inner.read().await;
     let items = map
         .iter()
@@ -62,9 +63,10 @@ pub async fn list_api_keys(State(store): State<Arc<ApiKeysStore>>) -> Json<Vec<A
 }
 
 pub async fn set_api_key(
-    State(store): State<Arc<ApiKeysStore>>,
+    State(state): State<crate::auth::ServerState>,
     Json(payload): Json<ApiKeyRecord>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
+    let store = state.admin_store.clone();
     if payload.user.trim().is_empty() || payload.api_key.trim().is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -79,9 +81,10 @@ pub async fn set_api_key(
 }
 
 pub async fn delete_api_key(
-    State(store): State<Arc<ApiKeysStore>>,
+    State(state): State<crate::auth::ServerState>,
     Path(user): Path<String>,
 ) -> StatusCode {
+    let store = state.admin_store.clone();
     let mut map = store.inner.write().await;
     let existed = map.remove(&user).is_some();
     drop(map);
@@ -92,11 +95,12 @@ pub async fn delete_api_key(
 }
 
 /// Middleware: require valid X-API-Key (or query `api_key`) for API routes
-pub async fn require_api_key(
-    State(store): State<Arc<ApiKeysStore>>,
-    mut req: Request,
+pub async fn require_api_key_state(
+    State(state): State<crate::auth::ServerState>,
+    req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    let store = state.admin_store.clone();
     let key_from_header = req
         .headers()
         .get("X-API-Key")
