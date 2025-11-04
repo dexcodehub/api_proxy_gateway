@@ -1,14 +1,13 @@
 use axum::{extract::{Path, Query, State}, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use service::services::proxy_api_service;
+use service::db::proxy_api_service;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use crate::auth::ServerState;
 use models::tenant;
 use sea_orm::{EntityTrait, ActiveModelTrait, Set};
 use chrono::Utc;
-use crate::errors::JsonApiError;
+use crate::{errors::JsonApiError, routes::auth::ServerState};
 // use proper attribute form: #[utoipa::path] on handlers
 
 #[derive(Debug, Deserialize, utoipa::IntoParams)]

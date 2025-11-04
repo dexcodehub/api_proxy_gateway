@@ -2,6 +2,8 @@ use axum::{extract::{Path, State, Request}, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
 use axum::middleware::Next;
 use axum::response::Response;
+
+use crate::routes::auth;
 // use proper attribute form: #[utoipa::path] on handlers
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -11,7 +13,7 @@ pub struct ApiKeyRecord {
 }
 
 #[utoipa::path(get, path = "/admin/api-keys", tag = "admin", responses((status = 200, description = "OK")))]
-pub async fn list_api_keys(State(state): State<crate::auth::ServerState>) -> Json<Vec<ApiKeyRecord>> {
+pub async fn list_api_keys(State(state): State<auth::ServerState>) -> Json<Vec<ApiKeyRecord>> {
     let store = state.admin_store.clone();
     let items = store
         .list()
@@ -24,7 +26,7 @@ pub async fn list_api_keys(State(state): State<crate::auth::ServerState>) -> Jso
 
 #[utoipa::path(post, path = "/admin/api-keys", tag = "admin", request_body = crate::openapi::ApiKeyRecordDoc, responses((status = 200, description = "OK"), (status = 400, description = "Bad Request")))]
 pub async fn set_api_key(
-    State(state): State<crate::auth::ServerState>,
+    State(state): State<auth::ServerState>,
     Json(payload): Json<ApiKeyRecord>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let store = state.admin_store.clone();
@@ -39,7 +41,7 @@ pub async fn set_api_key(
 }
 
 pub async fn delete_api_key(
-    State(state): State<crate::auth::ServerState>,
+    State(state): State<auth::ServerState>,
     Path(user): Path<String>,
 ) -> StatusCode {
     let store = state.admin_store.clone();
@@ -52,7 +54,7 @@ pub async fn delete_api_key(
 
 /// Middleware: require valid X-API-Key (or query `api_key`) for API routes
 pub async fn require_api_key_state(
-    State(state): State<crate::auth::ServerState>,
+    State(state): State<auth::ServerState>,
     req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {

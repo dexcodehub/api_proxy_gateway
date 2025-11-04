@@ -11,6 +11,30 @@ Design goals:
 - Avoid circular deps: service depends on `common`, not vice versa.
 - Use workspace dependencies for `tokio`, `axum`, `tracing`.
 
+## Storage
+
+To avoid duplicate file-backed persistence code, the crate provides a reusable
+`storage::json_map_store::JsonMapStore<K, V>` which persists a small
+`HashMap<K, V>` as JSON with simple CRUD helpers (`list`, `get`, `insert`,
+`remove`, `contains_value`, `update_map`).
+
+Existing services like `services::admin_kv_store::ApiKeysStore` and
+`services::api_management::ApiStore` now reuse this abstraction to keep a
+single responsibility per module while reducing boilerplate.
+
+## Services Layout
+
+Services are grouped by technical domain to keep boundaries clear:
+
+- `services/db/`: SeaORM-backed CRUD services
+  - `tenant_service`, `user_service`, `upstream_service`, `route_service`,
+    `request_log_service`, `ratelimit_service`, `proxy_api_service`
+- `services/file/`: File-backed stores
+  - `api_management`, `admin_kv_store`
+
+For backward compatibility, the old paths under `service::services::*` are
+re-exported, so existing imports remain valid.
+
 Usage:
 - Call `service::runtime::ensure_env(&frontend_dir, &data_dir)` during startup.
 - Spawn admin server via `service::admin_http::spawn_admin_server(addr, metrics_fn)`.
@@ -48,3 +72,9 @@ Validation and errors:
 Server routes:
 - `GET /admin/apis` list, `POST /admin/apis` create
 - `GET /admin/apis/:id` read, `PUT /admin/apis/:id` update, `DELETE /admin/apis/:id` delete
+
+## Admin API Keys (admin_kv_store)
+
+Simple file-backed key-value store mapping `user -> api_key`, implemented on
+top of `JsonMapStore<String, String>`. Provides `list`, `set`, `delete`, and
+`contains_value` with atomic persistence.

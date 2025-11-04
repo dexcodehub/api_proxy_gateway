@@ -1,9 +1,9 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tokio::{fs, sync::RwLock};
 use uuid::Uuid;
 use crate::errors::ServiceError;
+use crate::storage::json_map_store::JsonMapStore;
 
 /// 认证信息定义：目前支持是否需要 API Key，后续可扩展为更多类型
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -58,45 +58,29 @@ impl ApiRecordInput {
 /// 文件存储：以 JSON 文件持久化 API 列表
 #[derive(Clone)]
 pub struct ApiStore {
-    inner: Arc<RwLock<HashMap<Uuid, ApiRecord>>>,
-    file_path: PathBuf,
+    store: Arc<JsonMapStore<Uuid, ApiRecord>>,
 }
 
 impl ApiStore {
     /// 初始化存储，若文件不存在则创建空文件
-    pub async fn new<P: Into<PathBuf>>(path: P) -> Result<Arc<Self>, ServiceError> {
-        let file_path = path.into();
-        if let Some(parent) = file_path.parent() { fs::create_dir_all(parent).await.ok(); }
-        let map: HashMap<Uuid, ApiRecord> = match fs::read(&file_path).await {
-            Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
-            Err(_) => {
-                let empty: HashMap<Uuid, ApiRecord> = HashMap::new();
-                fs::write(&file_path, serde_json::to_vec(&empty).map_err(|e| ServiceError::Db(e.to_string()))?)
-                    .await
-                    .map_err(|e| ServiceError::Db(e.to_string()))?;
-                empty
-            }
-        };
-        Ok(Arc::new(Self { inner: Arc::new(RwLock::new(map)), file_path }))
-    }
-
-    async fn save(&self) -> Result<(), ServiceError> {
-        let map = self.inner.read().await;
-        let data = serde_json::to_vec(&*map).map_err(|e| ServiceError::Db(e.to_string()))?;
-        fs::write(&self.file_path, data).await.map_err(|e| ServiceError::Db(e.to_string()))?;
-        Ok(())
+    pub async fn new<P: Into<std::path::PathBuf>>(path: P) -> Result<Arc<Self>, ServiceError> {
+        let store = JsonMapStore::<Uuid, ApiRecord>::new(path).await?;
+        Ok(Arc::new(Self { store }))
     }
 
     /// 列出全部 API
     pub async fn list(&self) -> Vec<ApiRecord> {
-        let map = self.inner.read().await;
-        map.values().cloned().collect()
+        self.store
+            .list()
+            .await
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect()
     }
 
     /// 根据 id 获取
     pub async fn get(&self, id: Uuid) -> Option<ApiRecord> {
-        let map = self.inner.read().await;
-        map.get(&id).cloned()
+        self.store.get(&id).await
     }
 
     /// 创建新 API
@@ -110,35 +94,31 @@ impl ApiStore {
             auth: input.auth,
             created_at: Utc::now(),
         };
-        let mut map = self.inner.write().await;
-        map.insert(rec.id, rec.clone());
-        drop(map);
-        self.save().await?;
+        self.store.insert(rec.id, rec.clone()).await?;
         Ok(rec)
     }
 
     /// 更新指定 API（幂等）
     pub async fn update(&self, id: Uuid, input: ApiRecordInput) -> Result<ApiRecord, ServiceError> {
         input.validate()?;
-        let mut map = self.inner.write().await;
-        let existed = map.get_mut(&id).ok_or_else(|| ServiceError::not_found("api"))?;
-        existed.endpoint_url = input.endpoint_url;
-        existed.method = input.method.to_ascii_uppercase();
-        existed.forward_target = input.forward_target;
-        existed.auth = input.auth;
-        let updated = existed.clone();
-        drop(map);
-        self.save().await?;
-        Ok(updated)
+        let mut updated: Option<ApiRecord> = None;
+        self.store
+            .update_map(|map| {
+                let existed = map.get_mut(&id).ok_or_else(|| ServiceError::not_found("api"))?;
+                existed.endpoint_url = input.endpoint_url;
+                existed.method = input.method.to_ascii_uppercase();
+                existed.forward_target = input.forward_target;
+                existed.auth = input.auth;
+                updated = Some(existed.clone());
+                Ok(())
+            })
+            .await?;
+        Ok(updated.expect("updated set"))
     }
 
     /// 删除指定 API
     pub async fn delete(&self, id: Uuid) -> Result<bool, ServiceError> {
-        let mut map = self.inner.write().await;
-        let existed = map.remove(&id).is_some();
-        drop(map);
-        self.save().await?;
-        Ok(existed)
+        self.store.remove(&id).await
     }
 }
 

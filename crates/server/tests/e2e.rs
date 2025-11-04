@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::{Router};
-use service::services::{admin_kv_store::ApiKeysStore, api_management::ApiStore};
+use service::file::{admin_kv_store::ApiKeysStore, api_management::ApiStore};
 use tower_http::cors::CorsLayer;
 use tokio::net::TcpListener;
 use serde_json::json;
@@ -10,7 +10,7 @@ use uuid::Uuid;
 use reqwest::StatusCode as HttpStatusCode;
 use migration::MigratorTrait;
 
-use server::{routes, admin, auth};
+use server::routes::{self, auth};
 
 // Optional: use testcontainers for Postgres; skip if unavailable
 #[allow(unused_imports)]

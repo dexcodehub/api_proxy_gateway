@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, ActiveModelTrait, Set};
 use uuid::Uuid;
 
-use service::{auth::{domain::{AuthUser, LoginInput, RegisterInput}, service::{AuthConfig, AuthService}}, services::{admin_kv_store::ApiKeysStore, api_management::ApiStore}};
+use service::{auth::{domain::{ LoginInput, RegisterInput}, service::{AuthConfig, AuthService}}, file::{admin_kv_store::ApiKeysStore, api_management::ApiStore}};
 use service::auth::repo::seaorm::SeaOrmAuthRepository;
 use std::sync::Arc;
 use argon2::{Argon2, password_hash::{PasswordHasher, SaltString}};

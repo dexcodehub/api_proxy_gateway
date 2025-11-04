@@ -1,16 +1,21 @@
 use std::{env, net::SocketAddr, sync::Arc};
 
 use axum::Router;
+use common::utils::logging::init_logging_default;
 use dotenvy::dotenv;
 use tower_http::cors::CorsLayer;
 use tracing::info;
-use common::utils::logging::init_logging_default;
 
-use crate::{routes, auth};
-use service::{runtime, services::{admin_kv_store::ApiKeysStore, api_management::ApiStore}};
+use crate::routes::{self, auth};
+use service::{
+    file::{admin_kv_store::ApiKeysStore, api_management::ApiStore},
+    runtime,
+};
 
 /// Initialize logging via shared common utils
-fn init_logging() { init_logging_default(); }
+fn init_logging() {
+    init_logging_default();
+}
 
 fn build_cors() -> CorsLayer {
     CorsLayer::very_permissive()
@@ -54,7 +59,8 @@ pub async fn run() -> anyhow::Result<()> {
     let db = models::db::connect().await?;
 
     // JWT secret
-    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
+    let jwt_secret =
+        std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
     let state = auth::ServerState {
         db,
         auth: auth::ServerAuthConfig { jwt_secret },

@@ -1,15 +1,14 @@
 use axum::{Router, routing::post};
 use axum::http::{Request, StatusCode};
 use axum::body::Body;
-use service::services::admin_kv_store::ApiKeysStore;
-use service::services::api_management::ApiStore;
+use service::file::admin_kv_store::ApiKeysStore;
+use service::file::api_management::ApiStore;
 use tower::Service;
 use serde_json::json;
 use uuid::Uuid;
 use migration::MigratorTrait;
 
-use server::auth;
-use server::routes;
+use server::routes::{self, auth};
 
 fn cors() -> tower_http::cors::CorsLayer { tower_http::cors::CorsLayer::very_permissive() }
 

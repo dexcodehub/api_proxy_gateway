@@ -1,71 +1,39 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
-use tokio::{fs, sync::RwLock};
-
+use std::sync::Arc;
 use crate::errors::ServiceError;
+use crate::storage::json_map_store::JsonMapStore;
 
 /// File-backed key-value store for Admin API keys.
 /// Keeps a map of `user -> api_key` persisted as JSON.
 #[derive(Clone)]
 pub struct ApiKeysStore {
-    inner: Arc<RwLock<HashMap<String, String>>>,
-    file_path: PathBuf,
+    store: Arc<JsonMapStore<String, String>>,
 }
 
 impl ApiKeysStore {
     /// Initialize the store from the given file path. Creates the file if missing.
-    pub async fn new<P: Into<PathBuf>>(path: P) -> Result<Arc<Self>, ServiceError> {
-        let file_path = path.into();
-        if let Some(parent) = file_path.parent() { fs::create_dir_all(parent).await.ok(); }
-
-        let map: HashMap<String, String> = match fs::read(&file_path).await {
-            Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
-            Err(_) => {
-                let empty: HashMap<String, String> = HashMap::new();
-                fs::write(&file_path, serde_json::to_vec(&empty).map_err(|e| ServiceError::Db(e.to_string()))?)
-                    .await
-                    .map_err(|e| ServiceError::Db(e.to_string()))?;
-                empty
-            }
-        };
-
-        Ok(Arc::new(Self { inner: Arc::new(RwLock::new(map)), file_path }))
-    }
-
-    async fn save(&self) -> Result<(), ServiceError> {
-        let map = self.inner.read().await;
-        let data = serde_json::to_vec(&*map).map_err(|e| ServiceError::Db(e.to_string()))?;
-        fs::write(&self.file_path, data).await.map_err(|e| ServiceError::Db(e.to_string()))?;
-        Ok(())
+    pub async fn new<P: Into<std::path::PathBuf>>(path: P) -> Result<Arc<Self>, ServiceError> {
+        let store = JsonMapStore::<String, String>::new(path).await?;
+        Ok(Arc::new(Self { store }))
     }
 
     /// List all entries as `(user, api_key)` pairs.
     pub async fn list(&self) -> Vec<(String, String)> {
-        let map = self.inner.read().await;
-        map.iter().map(|(u, k)| (u.clone(), k.clone())).collect()
+        self.store.list().await
     }
 
     /// Upsert the API key for a user and persist.
     pub async fn set(&self, user: String, api_key: String) -> Result<(), ServiceError> {
-        let mut map = self.inner.write().await;
-        map.insert(user, api_key);
-        drop(map);
-        self.save().await
+        self.store.insert(user, api_key).await
     }
 
     /// Delete the API key for a user; returns whether an entry existed.
     pub async fn delete(&self, user: &str) -> Result<bool, ServiceError> {
-        let mut map = self.inner.write().await;
-        let existed = map.remove(user).is_some();
-        drop(map);
-        self.save().await?;
-        Ok(existed)
+        self.store.remove(&user.to_string()).await
     }
 
     /// Check whether any stored API key equals the given value.
     pub async fn contains_value(&self, value: &str) -> bool {
-        let map = self.inner.read().await;
-        let ok = map.values().any(|v| v == value);
-        ok
+        self.store.contains_value(&value.to_string()).await
     }
 }
 

@@ -10,7 +10,7 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
-use service::services::admin_kv_store::ApiKeysStore;
+use service::file::admin_kv_store::ApiKeysStore;
 use tower_http::{
     cors::CorsLayer,
     services::{ServeDir, ServeFile},
