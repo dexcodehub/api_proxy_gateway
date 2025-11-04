@@ -20,6 +20,16 @@ axiosInstance.interceptors.request.use(
         if (csrfToken) {
             (config.headers as Record<string, string>)["X-CSRF-Token"] = csrfToken;
         }
+        // Attach Authorization token from user store if present
+        try {
+            const { userToken } = userStore.getState();
+            const accessToken = userToken?.accessToken;
+            if (accessToken) {
+                (config.headers as Record<string, string>)["Authorization"] = `Bearer ${accessToken}`;
+            }
+        } catch (_) {
+            // ignore store access errors in non-react contexts
+        }
         return config;
     },
     (error) => Promise.reject(error),
@@ -42,7 +52,9 @@ axiosInstance.interceptors.response.use(
     },
     (error: AxiosError<Result>) => {
         const { response, message } = error || {};
-        const errMsg = (response?.data as any)?.message || message || t("sys.api.errorMessage");
+        // Prefer backend textual body when available (e.g., Axum returns string for errors)
+        const backendMsg = typeof response?.data === "string" ? (response?.data as string) : (response?.data as any)?.message;
+        const errMsg = backendMsg || message || t("sys.api.errorMessage");
         toast.error(errMsg, { position: "top-center" });
         if (response?.status === 401) {
             userStore.getState().actions.clearUserInfoAndToken();

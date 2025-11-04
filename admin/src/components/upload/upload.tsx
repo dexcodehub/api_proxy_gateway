@@ -3,13 +3,16 @@ import type { ItemRender } from "antd/es/upload/interface";
 import { StyledUpload } from "./styles";
 import UploadIllustration from "./upload-illustration";
 import UploadListItem from "./upload-list-item";
+import { getAuthHeaders } from "@/api/authHeaders";
 
 import type { UploadProps } from "antd";
 
 const { Dragger } = AntdUpload;
 
 interface Props extends UploadProps {
-	thumbnail?: boolean;
+    thumbnail?: boolean;
+    /** default true: 自动注入 Authorization 与 CSRF 头 */
+    withAuth?: boolean;
 }
 
 const itemRender: (thumbnail: boolean) => ItemRender = (thumbnail) => {
@@ -18,15 +21,16 @@ const itemRender: (thumbnail: boolean) => ItemRender = (thumbnail) => {
 		return <UploadListItem file={file} actions={actions} thumbnail={thumbnail} />;
 	};
 };
-export function Upload({ thumbnail = false, ...other }: Props) {
-	return (
-		<StyledUpload $thumbnail={thumbnail}>
-			<Dragger {...other} itemRender={itemRender(thumbnail)}>
-				<div className="opacity-100 hover:opacity-80">
-					<p className="m-auto max-w-[200px]">
-						<UploadIllustration />
-					</p>
-					<div>
+export function Upload({ thumbnail = false, withAuth = true, ...other }: Props) {
+    const headers = withAuth ? getAuthHeaders(other.headers) : other.headers;
+    return (
+        <StyledUpload $thumbnail={thumbnail}>
+            <Dragger {...other} headers={headers} itemRender={itemRender(thumbnail)}>
+                <div className="opacity-100 hover:opacity-80">
+                    <p className="m-auto max-w-[200px]">
+                        <UploadIllustration />
+                    </p>
+                    <div>
 						<h5 className="mt-4">Drop or Select file</h5>
 						<p className="text-sm text-gray-500">
 							Drop files here or click

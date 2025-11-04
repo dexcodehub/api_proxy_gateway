@@ -7,13 +7,16 @@ import type { UploadChangeParam, UploadFile, UploadProps } from "antd/es/upload"
 import { useState } from "react";
 import { StyledUploadAvatar } from "./styles";
 import { beforeAvatarUpload, getBlobUrl } from "./utils";
+import { getAuthHeaders } from "@/api/authHeaders";
 
 interface Props extends UploadProps {
-	defaultAvatar?: string;
-	helperText?: React.ReactElement | string;
+    defaultAvatar?: string;
+    helperText?: React.ReactElement | string;
+    /** default true: 自动注入 Authorization 与 CSRF 头 */
+    withAuth?: boolean;
 }
-export function UploadAvatar({ helperText, defaultAvatar = "", ...other }: Props) {
-	const [imageUrl, setImageUrl] = useState<string>(defaultAvatar);
+export function UploadAvatar({ helperText, defaultAvatar = "", withAuth = true, ...other }: Props) {
+    const [imageUrl, setImageUrl] = useState<string>(defaultAvatar);
 
 	const [isHover, setIsHover] = useState(false);
 	const handelHover = (hover: boolean) => {
@@ -65,20 +68,21 @@ export function UploadAvatar({ helperText, defaultAvatar = "", ...other }: Props
 	);
 	const renderHelpText = <div className="text-center">{helperText || defaultHelperText}</div>;
 
-	return (
-		<StyledUploadAvatar>
-			<Upload
-				name="avatar"
-				showUploadList={false}
-				listType="picture-circle"
-				className="avatar-uploader flex! items-center justify-center"
-				{...other}
-				beforeUpload={beforeAvatarUpload}
-				onChange={handleChange}
-			>
-				{renderContent}
-			</Upload>
-			{renderHelpText}
-		</StyledUploadAvatar>
-	);
+    return (
+        <StyledUploadAvatar>
+            <Upload
+                name="avatar"
+                showUploadList={false}
+                listType="picture-circle"
+                className="avatar-uploader flex! items-center justify-center"
+                {...other}
+                headers={withAuth ? getAuthHeaders(other.headers) : other.headers}
+                beforeUpload={beforeAvatarUpload}
+                onChange={handleChange}
+            >
+                {renderContent}
+            </Upload>
+            {renderHelpText}
+        </StyledUploadAvatar>
+    );
 }

@@ -1,8 +1,9 @@
 use axum::{extract::{Path, State}, http::StatusCode, Json};
 use uuid::Uuid;
-use service::api_management::{ApiStore, ApiRecord, ApiRecordInput};
+use service::api_management::{ ApiRecord, ApiRecordInput};
 
 use crate::auth::ServerState;
+use crate::errors::JsonApiError;
 
 /// 列出所有 API 记录
 pub async fn list_apis(State(state): State<ServerState>) -> Json<Vec<ApiRecord>> {
@@ -14,13 +15,13 @@ pub async fn list_apis(State(state): State<ServerState>) -> Json<Vec<ApiRecord>>
 pub async fn create_api(
     State(state): State<ServerState>,
     Json(input): Json<ApiRecordInput>,
-) -> Result<Json<ApiRecord>, (StatusCode, String)> {
+) -> Result<Json<ApiRecord>, JsonApiError> {
     let store = state.api_store.clone();
     store.create(input).await
         .map(Json)
         .map_err(|e| match e {
-            service::errors::ServiceError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            service::errors::ServiceError::Validation(msg) => JsonApiError::new(StatusCode::BAD_REQUEST, "Validation Error", Some(msg)),
+            _ => JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error", Some(e.to_string())),
         })
 }
 
@@ -41,14 +42,14 @@ pub async fn update_api(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
     Json(input): Json<ApiRecordInput>,
-) -> Result<Json<ApiRecord>, (StatusCode, String)> {
+) -> Result<Json<ApiRecord>, JsonApiError> {
     let store = state.api_store.clone();
     store.update(id, input).await
         .map(Json)
         .map_err(|e| match e {
-            service::errors::ServiceError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
-            service::errors::ServiceError::NotFound(_) => (StatusCode::NOT_FOUND, e.to_string()),
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()),
+            service::errors::ServiceError::Validation(msg) => JsonApiError::new(StatusCode::BAD_REQUEST, "Validation Error", Some(msg)),
+            service::errors::ServiceError::NotFound(_) => JsonApiError::new(StatusCode::NOT_FOUND, "Not Found", Some(e.to_string())),
+            _ => JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error", Some(e.to_string())),
         })
 }
 

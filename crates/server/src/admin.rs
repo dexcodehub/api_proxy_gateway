@@ -1,16 +1,13 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use axum::{extract::{Path, State, Request}, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use tokio::{fs, sync::RwLock};
+use tokio::sync::RwLock;
 use axum::middleware::Next;
 use axum::response::Response;
-
-#[derive(Clone)]
-pub struct ApiKeysStore {
-    inner: Arc<RwLock<HashMap<String, String>>>,
-    file_path: PathBuf,
-}
+// use proper attribute form: #[utoipa::path] on handlers
+use crate::openapi::ApiKeyRecordDoc;
+pub use service::admin_kv_store::ApiKeysStore;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiKeyRecord {
@@ -18,50 +15,19 @@ pub struct ApiKeyRecord {
     pub api_key: String,
 }
 
-impl ApiKeysStore {
-    pub async fn new<P: Into<PathBuf>>(path: P) -> anyhow::Result<Arc<Self>> {
-        let file_path = path.into();
-        if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).await.ok();
-        }
-
-        let map: HashMap<String, String> = match fs::read(&file_path).await {
-            Ok(bytes) => serde_json::from_slice(&bytes).unwrap_or_default(),
-            Err(_) => {
-                // initialize empty file
-                let empty: HashMap<String, String> = HashMap::new();
-                let _ = fs::write(&file_path, serde_json::to_vec(&empty)?).await;
-                empty
-            }
-        };
-
-        Ok(Arc::new(Self {
-            inner: Arc::new(RwLock::new(map)),
-            file_path,
-        }))
-    }
-
-    async fn save(&self) -> anyhow::Result<()> {
-        let map = self.inner.read().await;
-        let data = serde_json::to_vec(&*map)?;
-        fs::write(&self.file_path, data).await?;
-        Ok(())
-    }
-}
-
+#[utoipa::path(get, path = "/admin/api-keys", tag = "admin", responses((status = 200, description = "OK")))]
 pub async fn list_api_keys(State(state): State<crate::auth::ServerState>) -> Json<Vec<ApiKeyRecord>> {
     let store = state.admin_store.clone();
-    let map = store.inner.read().await;
-    let items = map
-        .iter()
-        .map(|(user, key)| ApiKeyRecord {
-            user: user.clone(),
-            api_key: key.clone(),
-        })
+    let items = store
+        .list()
+        .await
+        .into_iter()
+        .map(|(user, key)| ApiKeyRecord { user, api_key: key })
         .collect::<Vec<_>>();
     Json(items)
 }
 
+#[utoipa::path(post, path = "/admin/api-keys", tag = "admin", request_body = ApiKeyRecordDoc, responses((status = 200, description = "OK"), (status = 400, description = "Bad Request")))]
 pub async fn set_api_key(
     State(state): State<crate::auth::ServerState>,
     Json(payload): Json<ApiKeyRecord>,
@@ -71,10 +37,7 @@ pub async fn set_api_key(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    let mut map = store.inner.write().await;
-    map.insert(payload.user, payload.api_key);
-    drop(map);
-    if let Err(_) = store.save().await {
+    if let Err(_) = store.set(payload.user, payload.api_key).await {
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
     Ok(Json(serde_json::json!({"ok": true})))
@@ -85,13 +48,11 @@ pub async fn delete_api_key(
     Path(user): Path<String>,
 ) -> StatusCode {
     let store = state.admin_store.clone();
-    let mut map = store.inner.write().await;
-    let existed = map.remove(&user).is_some();
-    drop(map);
-    if store.save().await.is_err() {
-        return StatusCode::INTERNAL_SERVER_ERROR;
+    match store.delete(&user).await {
+        Ok(true) => StatusCode::NO_CONTENT,
+        Ok(false) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
-    if existed { StatusCode::NO_CONTENT } else { StatusCode::NOT_FOUND }
 }
 
 /// Middleware: require valid X-API-Key (or query `api_key`) for API routes
@@ -129,13 +90,10 @@ pub async fn require_api_key_state(
         _ => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let map = store.inner.read().await;
-    let ok = map.values().any(|v| v == &key);
-    drop(map);
-
-    if !ok {
+    if !store.contains_value(&key).await {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
     Ok(next.run(req).await)
 }
+// delete is not documented yet; can be added with #[utoipa::path]

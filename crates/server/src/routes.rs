@@ -12,6 +12,8 @@ use tower_http::{
 };
 use tracing::Level;
 use axum::middleware;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use common::{posts, types::Health};
 
@@ -20,7 +22,10 @@ use crate::apis;
 use crate::auth::{self, ServerState};
 use crate::errors::ApiError;
 use crate::proxy_apis;
+use crate::openapi;
+use crate::openapi::HealthResponse;
 
+#[utoipa::path(get, path = "/health", tag = "health", responses((status = 200, description = "Service OK", body = HealthResponse)))]
 pub async fn health() -> Json<Health> {
     Json(Health { status: "ok" })
 }
@@ -40,7 +45,7 @@ async fn get_post(Path(id): Path<u32>) -> Result<Json<serde_json::Value>, ApiErr
 }
 
 /// Build the full application router, including public, protected, and admin routes
-pub fn build_router(_admin_store: Arc<admin::ApiKeysStore>, cors: CorsLayer, state: ServerState) -> Router {
+pub fn build_router(_admin_store: Arc<service::admin_kv_store::ApiKeysStore>, cors: CorsLayer, state: ServerState) -> Router {
     let static_dir = ServeDir::new("frontend").fallback(ServeFile::new("frontend/index.html"));
 
     // Public routes (static + health)
@@ -76,12 +81,22 @@ pub fn build_router(_admin_store: Arc<admin::ApiKeysStore>, cors: CorsLayer, sta
         .route("/admin/proxy-apis/:id", get(proxy_apis::get).put(proxy_apis::update).delete(proxy_apis::delete))
         .with_state(state.clone());
 
+    // OpenAPI doc
+    let openapi = crate::openapi::ApiDoc::openapi();
+    let docs = SwaggerUi::new("/docs").url("/api-docs/openapi.json", openapi);
+
     // Compose
     public
         .merge(api)
         .merge(auth_routes)
         .merge(admin_routes)
-        .with_state(state)
+        .merge(docs)
+        .with_state(state.clone())
+        // 全局 Bearer Token 校验（白名单在中间件内部）
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth::require_bearer_token_state,
+        ))
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()

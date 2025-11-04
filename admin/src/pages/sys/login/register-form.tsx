@@ -1,4 +1,4 @@
-import userService from "@/api/services/userService";
+import userService, { type SignUpReq } from "@/api/services/userService";
 import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
@@ -7,27 +7,31 @@ import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { ReturnButton } from "./components/ReturnButton";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
+import { useSignIn } from "@/store/userStore";
 
 function RegisterForm() {
 	const { t } = useTranslation();
 	const { loginState, backToLogin } = useLoginStateContext();
 
-	const signUpMutation = useMutation({
-		mutationFn: userService.signup,
-	});
+    const signUpMutation = useMutation({
+        mutationFn: (payload: SignUpReq) => userService.signup(payload),
+    });
+    const signIn = useSignIn();
 
     const form = useForm({
         defaultValues: {
-            username: "",
+            email: "",
+            name: "",
             password: "",
             confirmPassword: "",
         },
     });
 
     const onFinish = async (values: any) => {
-        const payload = { username: values.username, password: values.password };
+        const payload: SignUpReq = { email: values.email, name: values.name, password: values.password };
         await signUpMutation.mutateAsync(payload);
-        backToLogin();
+        // Auto-login after successful registration
+        await signIn({ email: values.email, password: values.password });
     };
 
 	if (loginState !== LoginStateEnum.REGISTER) return null;
@@ -39,21 +43,38 @@ function RegisterForm() {
 					<h1 className="text-2xl font-bold">{t("sys.login.signUpFormTitle")}</h1>
 				</div>
 
-				<FormField
-					control={form.control}
-					name="username"
-					rules={{ required: t("sys.login.accountPlaceholder") }}
-					render={({ field }) => (
-						<FormItem>
-							<FormControl>
-								<Input placeholder={t("sys.login.userName")} {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+                {/* 邮箱 */}
+                <FormField
+                    control={form.control}
+                    name="email"
+                    rules={{
+                        required: t("sys.login.emaildPlaceholder"),
+                        pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t("sys.login.emaildPlaceholder") },
+                    }}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <Input placeholder={t("sys.login.email")} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
-                {/* 移除邮箱字段，仅用户名+密码注册 */}
+                {/* 昵称 */}
+                <FormField
+                    control={form.control}
+                    name="name"
+                    rules={{ required: t("sys.login.accountPlaceholder") }}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <Input placeholder={t("sys.login.userName")} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <FormField
                     control={form.control}
@@ -74,17 +95,17 @@ function RegisterForm() {
 					name="confirmPassword"
 					rules={{
 						required: t("sys.login.confirmPasswordPlaceholder"),
-						validate: (value) => value === form.getValues("password") || t("sys.login.diffPwd"),
-					}}
-					render={({ field }) => (
-						<FormItem>
-							<FormControl>
-								<Input type="password" placeholder={t("sys.login.confirmPassword")} {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+                        validate: (value) => value === form.getValues("password") || t("sys.login.diffPwd"),
+                    }}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <Input type="password" placeholder={t("sys.login.confirmPassword")} {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
 				<Button type="submit" className="w-full">
 					{t("sys.login.registerButton")}
@@ -101,7 +122,7 @@ function RegisterForm() {
 					</a>
 				</div>
 
-				<ReturnButton onClick={backToLogin} />
+                <ReturnButton onClick={backToLogin} />
 			</form>
 		</Form>
 	);

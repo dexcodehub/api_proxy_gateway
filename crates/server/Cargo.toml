@@ -29,6 +29,8 @@ models = { path = "../models" }
 sea-orm = { workspace = true }
 uuid = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
+utoipa = { version = "4", features = ["axum_extras", "uuid"] }
+utoipa-swagger-ui = { version = "6", features = ["axum"] }
 
 [dev-dependencies]
 migration = { path = "../migration" }

@@ -29,7 +29,7 @@ export type UpdateProxyApiInput = Partial<{
 }>;
 
 // 使用全局 axios baseURL `/api`，此处不再重复 `/api` 前缀
-const base = "/admin/proxy-apis";
+const base = "admin/proxy-apis";
 
 export default {
   async listProxyApis(tenant_id?: string): Promise<ProxyApiModel[]> {

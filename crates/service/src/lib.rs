@@ -17,5 +17,6 @@ pub mod runtime;
 pub mod admin_http;
 pub mod auth;
 pub mod proxy_api_service;
+pub mod admin_kv_store;
 #[cfg(test)]
 pub mod test_support;

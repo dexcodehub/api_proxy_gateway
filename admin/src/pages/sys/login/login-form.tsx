@@ -23,25 +23,25 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
     const form = useForm<SignInReq>({
         defaultValues: {
-            username: "",
+            email: "",
             password: "",
         },
     });
 
 	if (loginState !== LoginStateEnum.LOGIN) return null;
 
-	const handleFinish = async (values: SignInReq) => {
-		setLoading(true);
-		try {
-			await signIn(values);
-			navigatge(GLOBAL_CONFIG.defaultRoute, { replace: true });
-			toast.success(t("sys.login.loginSuccessTitle"), {
-				closeButton: true,
-			});
-		} finally {
-			setLoading(false);
-		}
-	};
+    const handleFinish = async (values: SignInReq) => {
+        setLoading(true);
+        try {
+            await signIn(values);
+            navigatge(GLOBAL_CONFIG.defaultRoute, { replace: true });
+            toast.success(t("sys.login.loginSuccessTitle"), {
+                closeButton: true,
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
 	return (
 		<div className={cn("flex flex-col gap-6", className)}>
@@ -54,13 +54,16 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
                     <FormField
                         control={form.control}
-                        name="username"
-                        rules={{ required: t("sys.login.accountPlaceholder") }}
+                        name="email"
+                        rules={{
+                            required: t("sys.login.emaildPlaceholder"),
+                            pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: t("sys.login.emaildPlaceholder") },
+                        }}
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>{t("sys.login.userName")}</FormLabel>
+                                <FormLabel>{t("sys.login.email")}</FormLabel>
                                 <FormControl>
-                                    <Input placeholder={t("sys.login.accountPlaceholder") || "用户名"} {...field} />
+                                    <Input placeholder={t("sys.login.emaildPlaceholder") || "请输入邮箱"} {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

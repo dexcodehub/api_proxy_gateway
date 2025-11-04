@@ -9,9 +9,10 @@ export type ApiKeyRecord = {
 };
 
 export const ApiKeyApi = {
-  List: "/admin/api-keys",
-  Create: "/admin/api-keys",
-  Delete: (user: string) => `/admin/api-keys/${encodeURIComponent(user)}`,
+  // Use relative paths so axios baseURL '/api' is applied
+  List: "admin/api-keys",
+  Create: "admin/api-keys",
+  Delete: (user: string) => `admin/api-keys/${encodeURIComponent(user)}`,
 };
 
 export function listApiKeys(): Promise<ApiKeyRecord[]> {

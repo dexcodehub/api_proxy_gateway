@@ -8,8 +8,11 @@ use service::proxy_api_service;
 use models::tenant;
 use sea_orm::{EntityTrait, ActiveModelTrait, Set};
 use chrono::Utc;
+use crate::errors::JsonApiError;
+// use proper attribute form: #[utoipa::path] on handlers
+use crate::openapi::{CreateProxyApiInputDoc, UpdateProxyApiInputDoc};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
 pub struct ListQuery { pub tenant_id: Option<Uuid> }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -33,14 +36,33 @@ pub struct UpdateProxyApiInput {
     pub enabled: Option<bool>,
 }
 
-pub async fn list(State(state): State<ServerState>, Query(q): Query<ListQuery>) -> Result<Json<Vec<models::proxy_api::Model>>, (StatusCode, Json<serde_json::Value>)> {
+/// List proxy APIs
+#[utoipa::path(
+    get, path = "/admin/proxy-apis", tag = "proxy",
+    params(ListQuery),
+    responses(
+        (status = 200, description = "List OK"),
+        (status = 500, description = "List Failed")
+    )
+)]
+pub async fn list(State(state): State<ServerState>, Query(q): Query<ListQuery>) -> Result<Json<Vec<models::proxy_api::Model>>, JsonApiError> {
     match proxy_api_service::list_proxy_apis(&state.db, q.tenant_id).await {
         Ok(list) => { info!(count = list.len(), "list proxy apis"); Ok(Json(list)) }
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"message": e.to_string()})))),
+        Err(e) => Err(JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "List Failed", Some(e.to_string()))),
     }
 }
 
-pub async fn create(State(state): State<ServerState>, Json(input): Json<CreateProxyApiInput>) -> Result<Json<models::proxy_api::Model>, (StatusCode, Json<serde_json::Value>)> {
+/// Create proxy API
+#[utoipa::path(
+    post, path = "/admin/proxy-apis", tag = "proxy",
+    request_body = CreateProxyApiInputDoc,
+    responses(
+        (status = 200, description = "Created"),
+        (status = 400, description = "Validation Error"),
+        (status = 500, description = "Create Failed")
+    )
+)]
+pub async fn create(State(state): State<ServerState>, Json(input): Json<CreateProxyApiInput>) -> Result<Json<models::proxy_api::Model>, JsonApiError> {
     // 解析/生成租户ID：兼容为空字符串或非法 UUID
     let tid = input
         .tenant_id
@@ -54,7 +76,7 @@ pub async fn create(State(state): State<ServerState>, Json(input): Json<CreatePr
     let maybe_tenant = tenant::Entity::find_by_id(tid)
         .one(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"message": e.to_string()}))))?;
+        .map_err(|e| JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB Error", Some(e.to_string())))?;
     if maybe_tenant.is_none() {
         let am = tenant::ActiveModel {
             id: Set(tid),
@@ -63,7 +85,7 @@ pub async fn create(State(state): State<ServerState>, Json(input): Json<CreatePr
         };
         am.insert(&state.db)
             .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"message": e.to_string()}))))?;
+            .map_err(|e| JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB Error", Some(e.to_string())))?;
         info!(tenant_id = %tid, "auto_created_tenant_for_proxy_api");
     }
 
@@ -71,13 +93,22 @@ pub async fn create(State(state): State<ServerState>, Json(input): Json<CreatePr
         Ok(m) => { info!(id = %m.id, tenant_id = %tid, endpoint = %m.endpoint_url, method = %m.method, "created proxy api"); Ok(Json(m)) },
         Err(e) => {
             match e {
-                service::errors::ServiceError::Validation(_) | service::errors::ServiceError::Model(_) => Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({"message": e.to_string()})))),
-                _ => { error!(err = %e, "create proxy api failed"); Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"message": e.to_string()})))) },
+                service::errors::ServiceError::Validation(_) | service::errors::ServiceError::Model(_) => Err(JsonApiError::new(StatusCode::BAD_REQUEST, "Validation Error", Some(e.to_string()))),
+                _ => { error!(err = %e, "create proxy api failed"); Err(JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Create Failed", Some(e.to_string()))) },
             }
         }
     }
 }
 
+/// Get proxy API
+#[utoipa::path(
+    get, path = "/admin/proxy-apis/{id}", tag = "proxy",
+    params(("id" = Uuid, Path, description = "Proxy API ID")),
+    responses(
+        (status = 200, description = "OK"),
+        (status = 404, description = "Not Found")
+    )
+)]
 pub async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> Result<Json<models::proxy_api::Model>, StatusCode> {
     match proxy_api_service::get_proxy_api(&state.db, id).await {
         Ok(Some(m)) => Ok(Json(m)),
@@ -86,7 +117,19 @@ pub async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> Resu
     }
 }
 
-pub async fn update(State(state): State<ServerState>, Path(id): Path<Uuid>, Json(input): Json<UpdateProxyApiInput>) -> Result<Json<models::proxy_api::Model>, (StatusCode, Json<serde_json::Value>)> {
+/// Update proxy API
+#[utoipa::path(
+    put, path = "/admin/proxy-apis/{id}", tag = "proxy",
+    params(("id" = Uuid, Path, description = "Proxy API ID")),
+    request_body = UpdateProxyApiInputDoc,
+    responses(
+        (status = 200, description = "Updated"),
+        (status = 400, description = "Validation Error"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Update Failed")
+    )
+)]
+pub async fn update(State(state): State<ServerState>, Path(id): Path<Uuid>, Json(input): Json<UpdateProxyApiInput>) -> Result<Json<models::proxy_api::Model>, JsonApiError> {
     match proxy_api_service::update_proxy_api(
         &state.db,
         id,
@@ -99,14 +142,24 @@ pub async fn update(State(state): State<ServerState>, Path(id): Path<Uuid>, Json
         Ok(m) => { info!(id = %m.id, "updated proxy api"); Ok(Json(m)) },
         Err(e) => {
             match e {
-                service::errors::ServiceError::Validation(_) | service::errors::ServiceError::Model(_) => Err((StatusCode::BAD_REQUEST, Json(serde_json::json!({"message": e.to_string()})))),
-                service::errors::ServiceError::NotFound(_) => Err((StatusCode::NOT_FOUND, Json(serde_json::json!({"message": e.to_string()})))),
-                _ => { error!(err = %e, "update proxy api failed"); Err((StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"message": e.to_string()})))) },
+                service::errors::ServiceError::Validation(_) | service::errors::ServiceError::Model(_) => Err(JsonApiError::new(StatusCode::BAD_REQUEST, "Validation Error", Some(e.to_string()))),
+                service::errors::ServiceError::NotFound(_) => Err(JsonApiError::new(StatusCode::NOT_FOUND, "Not Found", Some(e.to_string()))),
+                _ => { error!(err = %e, "update proxy api failed"); Err(JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Update Failed", Some(e.to_string()))) },
             }
         }
     }
 }
 
+/// Delete proxy API
+#[utoipa::path(
+    delete, path = "/admin/proxy-apis/{id}", tag = "proxy",
+    params(("id" = Uuid, Path, description = "Proxy API ID")),
+    responses(
+        (status = 204, description = "Deleted"),
+        (status = 404, description = "Not Found"),
+        (status = 500, description = "Delete Failed")
+    )
+)]
 pub async fn delete(State(state): State<ServerState>, Path(id): Path<Uuid>) -> StatusCode {
     match proxy_api_service::delete_proxy_api(&state.db, id).await {
         Ok(true) => { info!(id = %id, "deleted proxy api"); StatusCode::NO_CONTENT },

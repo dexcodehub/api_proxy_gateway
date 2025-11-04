@@ -5,10 +5,10 @@ import { faker } from "@faker-js/faker";
 import { http, HttpResponse } from "msw";
 import { DB_MENU, DB_PERMISSION, DB_ROLE, DB_ROLE_PERMISSION, DB_USER, DB_USER_ROLE } from "../assets_backup";
 
-const signIn = http.post(`/api${UserApi.SignIn}`, async ({ request }) => {
-	const { username, password } = (await request.json()) as Record<string, string>;
+const signIn = http.post(`/api${UserApi.Login}`, async ({ request }) => {
+    const { email, password } = (await request.json()) as Record<string, string>;
 
-	const user = DB_USER.find((item) => item.username === username);
+    const user = DB_USER.find((item) => item.email === email);
 
 	if (!user || user.password !== password) {
 		return HttpResponse.json({
@@ -35,11 +35,32 @@ const signIn = http.post(`/api${UserApi.SignIn}`, async ({ request }) => {
 		status: ResultStatus.SUCCESS,
 		message: "",
 		data: {
-			user: { ...userWithoutPassword, roles, permissions, menu },
-			accessToken: faker.string.uuid(),
-			refreshToken: faker.string.uuid(),
-		},
-	});
+            user: { ...userWithoutPassword, roles, permissions, menu },
+            accessToken: faker.string.uuid(),
+            refreshToken: faker.string.uuid(),
+        },
+    });
+});
+
+const signUp = http.post(`/api${UserApi.Register}`, async ({ request }) => {
+    const { email, name, password } = (await request.json()) as Record<string, string>;
+    // Basic validation
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return new HttpResponse("invalid email", { status: 400 });
+    }
+    if (!password || password.length < 8) {
+        return new HttpResponse("invalid password", { status: 400 });
+    }
+    // Conflict check
+    const exists = DB_USER.find((u) => u.email === email);
+    if (exists) {
+        return new HttpResponse("email already exists", { status: 409 });
+    }
+    // Persist new user into mock DB and give TEST role by default
+    const id = faker.string.uuid();
+    DB_USER.push({ id, username: name, password, avatar: faker.image.avatarGitHub(), email });
+    DB_USER_ROLE.push({ id: faker.string.uuid(), userId: id, roleId: "role_test_id" });
+    return HttpResponse.json({ id, email, name }, { status: 200 });
 });
 
 const userList = http.get("/api/user", async () => {
@@ -56,4 +77,4 @@ const userList = http.get("/api/user", async () => {
 	);
 });
 
-export { signIn, userList };
+export { signIn, signUp, userList };
