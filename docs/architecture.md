@@ -132,3 +132,26 @@ strip = true
 
 ## 结论
 该架构在网络、并发、数据访问与缓存层面进行了全链路优化，并通过观测、弹性与故障转移机制保障 10K+ QPS、≤50ms 延迟与 99.99% 可用性目标的达成。
+
+## 近期重构：服务层抽象与路由解耦
+- 引入 `service` 层的接口抽象，隔离业务逻辑与数据访问，路由处理器不再直接依赖具体存储实现。
+- 管理端存储：
+  - 新增 `service::admin::kv_store::AdminKvStore` trait，统一 API Key 的增删查接口；
+  - 文件实现：`service::file::admin_kv_store::ApiKeysStore` 现已实现该 trait，可平滑替换为 DB/KV。
+- API 管理存储：
+  - 新增 `service::admin::api_mgmt_store::ApiManagementStore` trait，封装 API 记录 CRUD；
+  - 文件实现：`service::file::api_management::ApiStore` 实现该 trait。
+- 代理 API（数据库驱动）：
+  - 新增仓库接口 `service::proxy_api::repository::ProxyApiRepository` 与应用服务 `service::proxy_api::service::ProxyApiService`；
+  - SeaORM 实现：`SeaOrmProxyApiRepository` 复用原有 DB 逻辑，`ProxyApiService` 统一校验与租户策略。
+- Server 状态注入：
+  - `ServerState` 现持有 `admin_kv_store: Arc<dyn AdminKvStore>`、`api_mgmt_store: Arc<dyn ApiManagementStore>`、`proxy_api_svc: Arc<ProxyApiService<_>>`；
+  - 启动阶段构造文件实现与服务实例，并以 trait 对象注入，便于未来替换。
+- 路由调整：
+  - 管理端与 API 管理路由改为调用 trait 接口；
+  - 代理 API 路由改为调用 `ProxyApiService`，处理校验与 CRUD，并移除控制器层的数据库细节。
+
+### 兼容性与影响
+- 对外 API 保持兼容；返回结构与路径未变。
+- 代码层面的引用从具体类型切换为 trait，对依赖模块影响有限。
+- 测试：需将 `ServerState` 构造与 `build_router` 调用更新为新字段；DB 相关测试可通过 `SKIP_DB_TESTS=1` 跳过。

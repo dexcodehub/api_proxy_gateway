@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, ActiveModelTrait, Set};
 use uuid::Uuid;
 
-use service::{auth::{domain::{ LoginInput, RegisterInput}, service::{AuthConfig, AuthService}}, file::{admin_kv_store::ApiKeysStore, api_management::ApiStore}};
+use service::{auth::{domain::{ LoginInput, RegisterInput}, service::{AuthConfig, AuthService}}, admin::{kv_store::AdminKvStore, api_mgmt_store::ApiManagementStore}};
 use service::auth::repo::seaorm::SeaOrmAuthRepository;
 use std::sync::Arc;
 use argon2::{Argon2, password_hash::{PasswordHasher, SaltString}};
@@ -23,8 +23,9 @@ pub struct ServerAuthConfig {
 pub struct ServerState {
     pub db: DatabaseConnection,
     pub auth: ServerAuthConfig,
-    pub admin_store: std::sync::Arc<ApiKeysStore>,
-    pub api_store: std::sync::Arc<ApiStore>,
+    pub admin_kv_store: std::sync::Arc<dyn AdminKvStore>,
+    pub api_mgmt_store: std::sync::Arc<dyn ApiManagementStore>,
+    pub proxy_api_svc: std::sync::Arc<service::proxy_api::service::ProxyApiService<service::proxy_api::repository::SeaOrmProxyApiRepository>>,
 }
 
 // RegisterInput is provided by service::auth::domain

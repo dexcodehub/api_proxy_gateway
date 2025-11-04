@@ -12,3 +12,5 @@ pub mod test_support;
 pub mod storage;
 pub mod db;
 pub mod file;
+pub mod admin;
+pub mod proxy_api;

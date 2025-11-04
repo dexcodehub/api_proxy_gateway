@@ -1,12 +1,9 @@
 use axum::{extract::{Path, Query, State}, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use service::db::proxy_api_service;
 use tracing::{info, error};
 use uuid::Uuid;
 
-use models::tenant;
-use sea_orm::{EntityTrait, ActiveModelTrait, Set};
-use chrono::Utc;
+// removed direct DB tenant operations; handled by service layer
 use crate::{errors::JsonApiError, routes::auth::ServerState};
 // use proper attribute form: #[utoipa::path] on handlers
 
@@ -42,7 +39,7 @@ pub struct UpdateProxyApiInput {
     )
 )]
 pub async fn list(State(state): State<ServerState>, Query(q): Query<ListQuery>) -> Result<Json<Vec<models::proxy_api::Model>>, JsonApiError> {
-    match proxy_api_service::list_proxy_apis(&state.db, q.tenant_id).await {
+    match state.proxy_api_svc.list(q.tenant_id).await {
         Ok(list) => { info!(count = list.len(), "list proxy apis"); Ok(Json(list)) }
         Err(e) => Err(JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "List Failed", Some(e.to_string()))),
     }
@@ -66,23 +63,7 @@ pub async fn create(State(state): State<ServerState>, Json(input): Json<CreatePr
 
     info!(endpoint = %input.endpoint_url, method = %input.method, target = %input.forward_target, require_api_key = %input.require_api_key, tenant_id = %tid, "proxy_api_create_request");
 
-    let maybe_tenant = tenant::Entity::find_by_id(tid)
-        .one(&state.db)
-        .await
-        .map_err(|e| JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB Error", Some(e.to_string())))?;
-    if maybe_tenant.is_none() {
-        let am = tenant::ActiveModel {
-            id: Set(tid),
-            name: Set(format!("auto-tenant-{}", tid)),
-            created_at: Set(Utc::now().into()),
-        };
-        am.insert(&state.db)
-            .await
-            .map_err(|e| JsonApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "DB Error", Some(e.to_string())))?;
-        info!(tenant_id = %tid, "auto_created_tenant_for_proxy_api");
-    }
-
-    match proxy_api_service::create_proxy_api(&state.db, tid, &input.endpoint_url, &input.method, &input.forward_target, input.require_api_key).await {
+    match state.proxy_api_svc.create(tid, &input.endpoint_url, &input.method, &input.forward_target, input.require_api_key, &state.db).await {
         Ok(m) => { info!(id = %m.id, tenant_id = %tid, endpoint = %m.endpoint_url, method = %m.method, "created proxy api"); Ok(Json(m)) },
         Err(e) => {
             match e {
@@ -102,7 +83,7 @@ pub async fn create(State(state): State<ServerState>, Json(input): Json<CreatePr
     )
 )]
 pub async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> Result<Json<models::proxy_api::Model>, StatusCode> {
-    match proxy_api_service::get_proxy_api(&state.db, id).await {
+    match state.proxy_api_svc.get(id).await {
         Ok(Some(m)) => Ok(Json(m)),
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -121,8 +102,7 @@ pub async fn get(State(state): State<ServerState>, Path(id): Path<Uuid>) -> Resu
     )
 )]
 pub async fn update(State(state): State<ServerState>, Path(id): Path<Uuid>, Json(input): Json<UpdateProxyApiInput>) -> Result<Json<models::proxy_api::Model>, JsonApiError> {
-    match proxy_api_service::update_proxy_api(
-        &state.db,
+    match state.proxy_api_svc.update(
         id,
         input.endpoint_url.as_deref(),
         input.method.as_deref(),
@@ -151,7 +131,7 @@ pub async fn update(State(state): State<ServerState>, Path(id): Path<Uuid>, Json
     )
 )]
 pub async fn delete(State(state): State<ServerState>, Path(id): Path<Uuid>) -> StatusCode {
-    match proxy_api_service::delete_proxy_api(&state.db, id).await {
+    match state.proxy_api_svc.delete(id).await {
         Ok(true) => { info!(id = %id, "deleted proxy api"); StatusCode::NO_CONTENT },
         Ok(false) => StatusCode::NOT_FOUND,
         Err(e) => { error!(err = %e, "delete proxy api failed"); StatusCode::INTERNAL_SERVER_ERROR },

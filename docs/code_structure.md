@@ -31,6 +31,44 @@ api_proxy/
 │       │   └── tracing.rs   # 链路追踪
 │       └── Cargo.toml
 └── migration/               # 数据库迁移
+
+## 重构后的关键模块（server 与 service）
+
+- `crates/service/`
+  - `admin/kv_store.rs`：`AdminKvStore` trait，抽象管理员 API Key 的存储接口。
+  - `admin/api_mgmt_store.rs`：`ApiManagementStore` trait，抽象 API 记录增删改查接口。
+  - `file/admin_kv_store.rs`：文件实现 `ApiKeysStore`，已实现 `AdminKvStore`。
+  - `file/api_management.rs`：文件实现 `ApiStore`，已实现 `ApiManagementStore`。
+  - `proxy_api/repository.rs`：`ProxyApiRepository` 接口与 `SeaOrmProxyApiRepository` 实现（基于 SeaORM）。
+  - `proxy_api/service.rs`：`ProxyApiService` 应用服务，统一业务校验与租户策略。
+  - `errors.rs`：`ServiceError` 统一错误类型，包含校验、未找到、数据库与模型错误。
+
+- `crates/server/`
+  - `routes/auth.rs`：`ServerState` 改为注入 trait 对象：`admin_kv_store`、`api_mgmt_store`、`proxy_api_svc`。
+  - `routes/admin.rs`：中间件与管理端路由改为调用 `AdminKvStore`；查询 `X-API-Key`/`api_key` 并校验。
+  - `routes/apis.rs`：API 记录 CRUD 经由 `ApiManagementStore` 实现。
+  - `routes/proxy_apis.rs`：代理 API 路由经由 `ProxyApiService` 统一处理；控制器层移除 DB 细节。
+  - `startup.rs`：在启动时构造文件实现与服务实例，并以 trait 对象注入到 `ServerState`；同时保留静态资源中间件的文件实现参数。
+  - `routes.rs`：`build_router` 仍接收文件实现以支持静态服务，但业务处理依赖 `ServerState` 的 trait。
+
+### 使用指南（构造与注入）
+- 构造文件实现：
+  - `let admin_store = ApiKeysStore::new("data/api_keys.json").await?;`
+  - `let api_store = ApiStore::new("data/apis.json").await?;`
+- 转换为 trait 对象并注入：
+  - `let admin_kv: Arc<dyn AdminKvStore> = admin_store.clone();`
+  - `let api_mgmt: Arc<dyn ApiManagementStore> = api_store.clone();`
+  - `let repo = SeaOrmProxyApiRepository { db: db.clone() };`
+  - `let proxy_svc = Arc::new(ProxyApiService::new(Arc::new(repo)));`
+- `ServerState`：
+  - `ServerState { db, auth, admin_kv_store: admin_kv, api_mgmt_store: api_mgmt, proxy_api_svc: proxy_svc }`
+- 路由构建：
+  - `let app = routes::build_router(admin_store.clone(), cors(), state);`
+
+### 测试注意事项
+- DB 相关测试可通过环境变量跳过：
+  - `SKIP_DB_TESTS=1 cargo test -p server`
+- 服务层单测均复用 `service::test_support::get_db`；如无数据库，请设置 `SKIP_DB_TESTS=1`。
 ```
 
 ## 核心接口定义

@@ -1,8 +1,10 @@
-use axum::{Router, routing::post};
+use axum::{Router};
 use axum::http::{Request, StatusCode};
 use axum::body::Body;
 use service::file::admin_kv_store::ApiKeysStore;
 use service::file::api_management::ApiStore;
+use service::admin::{kv_store::AdminKvStore, api_mgmt_store::ApiManagementStore};
+use service::proxy_api::{repository::SeaOrmProxyApiRepository, service::ProxyApiService};
 use tower::Service;
 use serde_json::json;
 use uuid::Uuid;
@@ -26,13 +28,21 @@ async fn build_app() -> anyhow::Result<Router> {
     let admin_store = ApiKeysStore::new("data/api_keys.json").await?;
     // 初始化 API 管理存储（用于 /admin/apis 管理端点）
     let api_store = ApiStore::new("data/apis.json").await?;
+    // 将文件实现转换为 trait 对象供路由使用
+    let admin_kv_store: std::sync::Arc<dyn AdminKvStore> = admin_store.clone();
+    let api_mgmt_store: std::sync::Arc<dyn ApiManagementStore> = api_store.clone();
+
+    // 构建 ProxyApiService（基于 SeaORM 仓库实现）
+    let repo = SeaOrmProxyApiRepository { db: db.clone() };
+    let proxy_api_svc = std::sync::Arc::new(ProxyApiService::new(std::sync::Arc::new(repo)));
     let state = auth::ServerState {
         db,
         auth: auth::ServerAuthConfig { jwt_secret: "test-secret".into() },
-        admin_store,
-        api_store: std::sync::Arc::clone(&api_store),
+        admin_kv_store: std::sync::Arc::clone(&admin_kv_store),
+        api_mgmt_store: std::sync::Arc::clone(&api_mgmt_store),
+        proxy_api_svc: std::sync::Arc::clone(&proxy_api_svc),
     };
-    Ok(routes::build_router(state.admin_store.clone(), cors(), state))
+    Ok(routes::build_router(admin_store.clone(), cors(), state))
 }
 
 #[tokio::test]

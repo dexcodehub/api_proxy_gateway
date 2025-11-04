@@ -14,7 +14,7 @@ pub struct ApiKeyRecord {
 
 #[utoipa::path(get, path = "/admin/api-keys", tag = "admin", responses((status = 200, description = "OK")))]
 pub async fn list_api_keys(State(state): State<auth::ServerState>) -> Json<Vec<ApiKeyRecord>> {
-    let store = state.admin_store.clone();
+    let store = state.admin_kv_store.clone();
     let items = store
         .list()
         .await
@@ -29,7 +29,7 @@ pub async fn set_api_key(
     State(state): State<auth::ServerState>,
     Json(payload): Json<ApiKeyRecord>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    let store = state.admin_store.clone();
+    let store = state.admin_kv_store.clone();
     if payload.user.trim().is_empty() || payload.api_key.trim().is_empty() {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -44,7 +44,7 @@ pub async fn delete_api_key(
     State(state): State<auth::ServerState>,
     Path(user): Path<String>,
 ) -> StatusCode {
-    let store = state.admin_store.clone();
+    let store = state.admin_kv_store.clone();
     match store.delete(&user).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,
@@ -58,7 +58,7 @@ pub async fn require_api_key_state(
     req: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    let store = state.admin_store.clone();
+    let store = state.admin_kv_store.clone();
     let key_from_header = req
         .headers()
         .get("X-API-Key")

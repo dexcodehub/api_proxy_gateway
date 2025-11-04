@@ -9,6 +9,8 @@ use tracing::info;
 use crate::routes::{self, auth};
 use service::{
     file::{admin_kv_store::ApiKeysStore, api_management::ApiStore},
+    admin::{kv_store::AdminKvStore, api_mgmt_store::ApiManagementStore},
+    proxy_api::{repository::SeaOrmProxyApiRepository, service::ProxyApiService},
     runtime,
 };
 
@@ -50,10 +52,12 @@ pub async fn run() -> anyhow::Result<()> {
     runtime::ensure_env("frontend", "data").await?;
 
     // Admin state for API Key management
-    let admin_store = ApiKeysStore::new("data/api_keys.json").await?;
+    let admin_store_file = ApiKeysStore::new("data/api_keys.json").await?;
+    let admin_store: std::sync::Arc<dyn AdminKvStore> = admin_store_file.clone();
 
     // API 管理存储（文件持久化 data/apis.json）
-    let api_store = ApiStore::new("data/apis.json").await?;
+    let api_store_file = ApiStore::new("data/apis.json").await?;
+    let api_store: std::sync::Arc<dyn ApiManagementStore> = api_store_file.clone();
 
     // DB connection
     let db = models::db::connect().await?;
@@ -61,16 +65,20 @@ pub async fn run() -> anyhow::Result<()> {
     // JWT secret
     let jwt_secret =
         std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
+    let repo = SeaOrmProxyApiRepository { db: db.clone() };
+    let proxy_api_svc = std::sync::Arc::new(ProxyApiService::new(std::sync::Arc::new(repo)));
+
     let state = auth::ServerState {
         db,
         auth: auth::ServerAuthConfig { jwt_secret },
-        admin_store: std::sync::Arc::clone(&admin_store),
-        api_store: std::sync::Arc::clone(&api_store),
+        admin_kv_store: std::sync::Arc::clone(&admin_store),
+        api_mgmt_store: std::sync::Arc::clone(&api_store),
+        proxy_api_svc: std::sync::Arc::clone(&proxy_api_svc),
     };
 
     // Build router
     let cors = build_cors();
-    let app: Router = routes::build_router(Arc::clone(&admin_store), cors, state);
+    let app: Router = routes::build_router(Arc::clone(&admin_store_file), cors, state);
 
     // Bind and serve
     let addr = load_bind_addr()?;

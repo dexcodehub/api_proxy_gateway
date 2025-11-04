@@ -6,7 +6,7 @@ use crate::{errors::JsonApiError, routes::auth::ServerState};
 
 /// 列出所有 API 记录
 pub async fn list_apis(State(state): State<ServerState>) -> Json<Vec<ApiRecord>> {
-    let store = state.api_store.clone();
+    let store = state.api_mgmt_store.clone();
     Json(store.list().await)
 }
 
@@ -15,7 +15,7 @@ pub async fn create_api(
     State(state): State<ServerState>,
     Json(input): Json<ApiRecordInput>,
 ) -> Result<Json<ApiRecord>, JsonApiError> {
-    let store = state.api_store.clone();
+    let store = state.api_mgmt_store.clone();
     store.create(input).await
         .map(Json)
         .map_err(|e| match e {
@@ -29,7 +29,7 @@ pub async fn get_api(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiRecord>, StatusCode> {
-    let store = state.api_store.clone();
+    let store = state.api_mgmt_store.clone();
     match store.get(id).await {
         Some(rec) => Ok(Json(rec)),
         None => Err(StatusCode::NOT_FOUND),
@@ -42,7 +42,7 @@ pub async fn update_api(
     Path(id): Path<Uuid>,
     Json(input): Json<ApiRecordInput>,
 ) -> Result<Json<ApiRecord>, JsonApiError> {
-    let store = state.api_store.clone();
+    let store = state.api_mgmt_store.clone();
     store.update(id, input).await
         .map(Json)
         .map_err(|e| match e {
@@ -57,7 +57,7 @@ pub async fn delete_api(
     State(state): State<ServerState>,
     Path(id): Path<Uuid>,
 ) -> StatusCode {
-    let store = state.api_store.clone();
+    let store = state.api_mgmt_store.clone();
     match store.delete(id).await {
         Ok(true) => StatusCode::NO_CONTENT,
         Ok(false) => StatusCode::NOT_FOUND,

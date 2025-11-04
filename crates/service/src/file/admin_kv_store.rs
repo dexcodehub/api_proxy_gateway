@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use crate::errors::ServiceError;
 use crate::storage::json_map_store::JsonMapStore;
+use crate::admin::kv_store::AdminKvStore;
 
 /// File-backed key-value store for Admin API keys.
 /// Keeps a map of `user -> api_key` persisted as JSON.
@@ -35,6 +36,14 @@ impl ApiKeysStore {
     pub async fn contains_value(&self, value: &str) -> bool {
         self.store.contains_value(&value.to_string()).await
     }
+}
+
+#[async_trait::async_trait]
+impl AdminKvStore for ApiKeysStore {
+    async fn list(&self) -> Vec<(String, String)> { self.list().await }
+    async fn set(&self, user: String, api_key: String) -> Result<(), ServiceError> { self.set(user, api_key).await }
+    async fn delete(&self, user: &str) -> Result<bool, ServiceError> { self.delete(user).await }
+    async fn contains_value(&self, value: &str) -> bool { self.contains_value(value).await }
 }
 
 #[cfg(test)]

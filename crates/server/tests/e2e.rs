@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 use axum::{Router};
 use service::file::{admin_kv_store::ApiKeysStore, api_management::ApiStore};
+use service::admin::{kv_store::AdminKvStore, api_mgmt_store::ApiManagementStore};
+use service::proxy_api::{repository::SeaOrmProxyApiRepository, service::ProxyApiService};
 use tower_http::cors::CorsLayer;
 use tokio::net::TcpListener;
 use serde_json::json;
@@ -43,15 +45,22 @@ async fn start_server() -> anyhow::Result<TestApp> {
     let apis_path = format!("target/test-data/{}/apis.json", temp_id);
     let admin_store = ApiKeysStore::new(&api_keys_path).await?;
     let api_store = ApiStore::new(&apis_path).await?;
+    // 转为 trait 对象供 ServerState 使用
+    let admin_kv_store: Arc<dyn AdminKvStore> = admin_store.clone();
+    let api_mgmt_store: Arc<dyn ApiManagementStore> = api_store.clone();
 
     let state = auth::ServerState {
-        db,
+        db: db.clone(),
         auth: auth::ServerAuthConfig { jwt_secret: "test-secret".into() },
-        admin_store,
-        api_store: Arc::clone(&api_store),
+        admin_kv_store: Arc::clone(&admin_kv_store),
+        api_mgmt_store: Arc::clone(&api_mgmt_store),
+        proxy_api_svc: {
+            let repo = SeaOrmProxyApiRepository { db: db.clone() };
+            Arc::new(ProxyApiService::new(Arc::new(repo)))
+        },
     };
 
-    let app: Router = routes::build_router(state.admin_store.clone(), cors(), state);
+    let app: Router = routes::build_router(admin_store.clone(), cors(), state);
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).await?;
     let addr: SocketAddr = listener.local_addr()?;
     let base_url = format!("http://{}:{}", addr.ip(), addr.port());

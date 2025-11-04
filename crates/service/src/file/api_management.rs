@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::errors::ServiceError;
 use crate::storage::json_map_store::JsonMapStore;
+use crate::admin::api_mgmt_store::ApiManagementStore;
 
 /// 认证信息定义：目前支持是否需要 API Key，后续可扩展为更多类型
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -120,6 +121,15 @@ impl ApiStore {
     pub async fn delete(&self, id: Uuid) -> Result<bool, ServiceError> {
         self.store.remove(&id).await
     }
+}
+
+#[async_trait::async_trait]
+impl ApiManagementStore for ApiStore {
+    async fn list(&self) -> Vec<ApiRecord> { self.list().await }
+    async fn get(&self, id: Uuid) -> Option<ApiRecord> { self.get(id).await }
+    async fn create(&self, input: ApiRecordInput) -> Result<ApiRecord, ServiceError> { self.create(input).await }
+    async fn update(&self, id: Uuid, input: ApiRecordInput) -> Result<ApiRecord, ServiceError> { self.update(id, input).await }
+    async fn delete(&self, id: Uuid) -> Result<bool, ServiceError> { self.delete(id).await }
 }
 
 #[cfg(test)]
