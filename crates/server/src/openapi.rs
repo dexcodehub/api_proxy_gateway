@@ -36,15 +36,15 @@ pub struct UpdateProxyApiInputDoc {
 #[openapi(
     paths(
         crate::routes::health,
-        crate::auth::register,
-        crate::auth::login,
-        crate::admin::list_api_keys,
-        crate::admin::set_api_key,
-        crate::proxy_apis::list,
-        crate::proxy_apis::create,
-        crate::proxy_apis::get,
-        crate::proxy_apis::update,
-        crate::proxy_apis::delete,
+        crate::routes::auth::register,
+        crate::routes::auth::login,
+        crate::routes::admin::list_api_keys,
+        crate::routes::admin::set_api_key,
+        crate::routes::proxy_apis::list,
+        crate::routes::proxy_apis::create,
+        crate::routes::proxy_apis::get,
+        crate::routes::proxy_apis::update,
+        crate::routes::proxy_apis::delete,
     ),
     components(
         schemas(

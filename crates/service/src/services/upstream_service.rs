@@ -2,7 +2,8 @@ use uuid::Uuid;
 use chrono::Utc;
 use sea_orm::{DatabaseConnection, EntityTrait, ActiveModelTrait, Set};
 use models::upstream;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
+use common::pagination::Pagination;
 
 /// Create an upstream.
 pub async fn create_upstream(db: &DatabaseConnection, name: &str, base_url: &str) -> Result<upstream::Model, ServiceError> {

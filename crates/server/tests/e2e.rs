@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use axum::{Router};
+use service::services::{admin_kv_store::ApiKeysStore, api_management::ApiStore};
 use tower_http::cors::CorsLayer;
 use tokio::net::TcpListener;
 use serde_json::json;
@@ -10,7 +11,6 @@ use reqwest::StatusCode as HttpStatusCode;
 use migration::MigratorTrait;
 
 use server::{routes, admin, auth};
-use service::api_management::ApiStore;
 
 // Optional: use testcontainers for Postgres; skip if unavailable
 #[allow(unused_imports)]
@@ -41,7 +41,7 @@ async fn start_server() -> anyhow::Result<TestApp> {
     let temp_id = Uuid::new_v4();
     let api_keys_path = format!("target/test-data/{}/api_keys.json", temp_id);
     let apis_path = format!("target/test-data/{}/apis.json", temp_id);
-    let admin_store = admin::ApiKeysStore::new(&api_keys_path).await?;
+    let admin_store = ApiKeysStore::new(&api_keys_path).await?;
     let api_store = ApiStore::new(&apis_path).await?;
 
     let state = auth::ServerState {

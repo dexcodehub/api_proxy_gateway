@@ -2,7 +2,8 @@ use uuid::Uuid;
 use sea_orm::{DatabaseConnection, ActiveModelTrait, EntityTrait, Set};
 use chrono::Utc;
 use models::ratelimit;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
+use common::pagination::Pagination;
 
 /// Create a rate limit.
 pub async fn create_rate_limit(db: &DatabaseConnection, tenant_id: Option<Uuid>, requests_per_minute: i32, burst: i32) -> Result<ratelimit::Model, ServiceError> {

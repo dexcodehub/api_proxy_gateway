@@ -1,4 +1,4 @@
-//! Pagination utilities for service layer
+//! Pagination utilities shared across crates
 //!
 //! Provides a simple `Pagination` struct and helpers to normalize inputs.
 
@@ -12,7 +12,7 @@ pub struct Pagination {
 }
 
 impl Pagination {
-    /// Clamp to sane defaults and convert to `u64`
+    /// Clamp to sane defaults and convert to `(page_index, per_page)` as `u64`
     pub fn normalize(self) -> (u64, u64) {
         let page = if self.page == 0 { 1 } else { self.page };
         let per_page = self.per_page.clamp(1, 100);

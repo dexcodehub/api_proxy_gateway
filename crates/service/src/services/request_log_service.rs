@@ -2,7 +2,8 @@ use uuid::Uuid;
 use sea_orm::{DatabaseConnection, ActiveModelTrait, EntityTrait, Set};
 use chrono::Utc;
 use models::request_log;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
+use common::pagination::Pagination;
 
 /// Create a request log entry.
 pub async fn create_request_log(

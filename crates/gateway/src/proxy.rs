@@ -9,7 +9,6 @@ use pingora_proxy::{ProxyHttp, Session};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use serde_json::json;
 
 use crate::circuit_breaker::CircuitBreaker;
 use crate::config::ProxyConfig;

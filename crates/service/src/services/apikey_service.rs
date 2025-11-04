@@ -1,7 +1,8 @@
+use common::pagination::Pagination;
 use uuid::Uuid;
 use sea_orm::{DatabaseConnection, EntityTrait};
 use models::apikey;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
 
 /// Create API key for a user.
 pub async fn create_api_key(db: &DatabaseConnection, user_id: Uuid, key_hash: &str) -> Result<apikey::Model, ServiceError> {

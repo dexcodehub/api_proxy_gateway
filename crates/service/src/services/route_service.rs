@@ -2,7 +2,8 @@ use uuid::Uuid;
 use chrono::Utc;
 use sea_orm::{DatabaseConnection, ActiveModelTrait, EntityTrait, Set};
 use models::route;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
+use common::pagination::Pagination;
 
 /// Create a route.
 pub async fn create_route(

@@ -7,7 +7,7 @@ use tracing::info;
 use common::utils::logging::init_logging_default;
 
 use crate::{routes, auth};
-use service::runtime;
+use service::{runtime, services::{admin_kv_store::ApiKeysStore, api_management::ApiStore}};
 
 /// Initialize logging via shared common utils
 fn init_logging() { init_logging_default(); }
@@ -45,10 +45,10 @@ pub async fn run() -> anyhow::Result<()> {
     runtime::ensure_env("frontend", "data").await?;
 
     // Admin state for API Key management
-    let admin_store = service::admin_kv_store::ApiKeysStore::new("data/api_keys.json").await?;
+    let admin_store = ApiKeysStore::new("data/api_keys.json").await?;
 
     // API 管理存储（文件持久化 data/apis.json）
-    let api_store = service::api_management::ApiStore::new("data/apis.json").await?;
+    let api_store = ApiStore::new("data/apis.json").await?;
 
     // DB connection
     let db = models::db::connect().await?;

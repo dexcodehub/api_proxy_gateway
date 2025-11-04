@@ -1,3 +1,8 @@
+pub mod auth;
+pub mod admin;
+pub mod apis;
+pub mod proxy_apis;
+
 use std::sync::Arc;
 
 use axum::{
@@ -5,6 +10,7 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
+use service::services::admin_kv_store::ApiKeysStore;
 use tower_http::{
     cors::CorsLayer,
     services::{ServeDir, ServeFile},
@@ -17,15 +23,10 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use common::{posts, types::Health};
 
-use crate::admin;
-use crate::apis;
-use crate::auth::{self, ServerState};
+use self::auth::ServerState;
 use crate::errors::ApiError;
-use crate::proxy_apis;
-use crate::openapi;
-use crate::openapi::HealthResponse;
 
-#[utoipa::path(get, path = "/health", tag = "health", responses((status = 200, description = "Service OK", body = HealthResponse)))]
+#[utoipa::path(get, path = "/health", tag = "health", responses((status = 200, description = "Service OK", body = crate::openapi::HealthResponse)))]
 pub async fn health() -> Json<Health> {
     Json(Health { status: "ok" })
 }
@@ -45,7 +46,7 @@ async fn get_post(Path(id): Path<u32>) -> Result<Json<serde_json::Value>, ApiErr
 }
 
 /// Build the full application router, including public, protected, and admin routes
-pub fn build_router(_admin_store: Arc<service::admin_kv_store::ApiKeysStore>, cors: CorsLayer, state: ServerState) -> Router {
+pub fn build_router(_admin_store: Arc<ApiKeysStore>, cors: CorsLayer, state: ServerState) -> Router {
     let static_dir = ServeDir::new("frontend").fallback(ServeFile::new("frontend/index.html"));
 
     // Public routes (static + health)

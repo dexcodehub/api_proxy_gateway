@@ -1,11 +1,9 @@
-//! Runtime helpers for environment sanity checks
-use tracing::warn;
+//! Runtime environment helpers
+//!
+//! Thin wrapper around `common::env` to keep binary crates importing
+//! `service::runtime::ensure_env` without depending directly on `common`.
 
 /// Ensure expected directories exist; warn on missing optional ones.
 pub async fn ensure_env(frontend_dir: &str, data_dir: &str) -> anyhow::Result<()> {
-    if tokio::fs::metadata(frontend_dir).await.is_err() {
-        warn!("{frontend_dir} not found; static assets may 404");
-    }
-    tokio::fs::create_dir_all(data_dir).await.map_err(|e| anyhow::anyhow!("cannot create {data_dir}: {e}"))?;
-    Ok(())
+    common::env::ensure_env(frontend_dir, data_dir).await
 }

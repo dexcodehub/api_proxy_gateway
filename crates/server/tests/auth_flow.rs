@@ -1,6 +1,8 @@
 use axum::{Router, routing::post};
 use axum::http::{Request, StatusCode};
 use axum::body::Body;
+use service::services::admin_kv_store::ApiKeysStore;
+use service::services::api_management::ApiStore;
 use tower::Service;
 use serde_json::json;
 use uuid::Uuid;
@@ -8,8 +10,6 @@ use migration::MigratorTrait;
 
 use server::auth;
 use server::routes;
-use server::admin;
-use service::api_management::ApiStore;
 
 fn cors() -> tower_http::cors::CorsLayer { tower_http::cors::CorsLayer::very_permissive() }
 
@@ -24,7 +24,7 @@ async fn build_app() -> anyhow::Result<Router> {
             return Err(e.into());
         }
     }
-    let admin_store = admin::ApiKeysStore::new("data/api_keys.json").await?;
+    let admin_store = ApiKeysStore::new("data/api_keys.json").await?;
     // 初始化 API 管理存储（用于 /admin/apis 管理端点）
     let api_store = ApiStore::new("data/apis.json").await?;
     let state = auth::ServerState {

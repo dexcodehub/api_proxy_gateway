@@ -3,7 +3,8 @@ use chrono::Utc;
 use sea_orm::{DatabaseConnection, ActiveModelTrait, EntityTrait, Set};
 
 use models::user;
-use crate::{errors::ServiceError, pagination::Pagination};
+use crate::{errors::ServiceError};
+use common::pagination::Pagination;
 
 /// Create a new user under a tenant.
 pub async fn create_user(db: &DatabaseConnection, tenant_id: Uuid, email: &str, name: &str) -> Result<user::Model, ServiceError> {
